@@ -11,5 +11,8 @@ startRecordingChannel.listenAsync(async () => {
 });
 
 stopRecordingChannel.listenAsync(async () => {
+  if (await screenRecorder.isRecording()) {
+    return;
+  }
   await screenRecorder.stopRecording();
 });

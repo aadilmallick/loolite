@@ -35,6 +35,10 @@ export class ScreenRecorder {
     });
   }
 
+  async isRecording() {
+    return this.recorder && this.recorder.state === "recording";
+  }
+
   async stopRecording() {
     this.stream.getTracks().forEach((track) => track.stop());
     this.recorder.stop();

@@ -13,7 +13,7 @@
     "default_title": "EZ Screen Recorder",
     "default_icon": "icon.png"
   },
-  "permissions": ["activeTab", "desktopCapture", "tabCapture", "offscreen"],
+  "permissions": ["activeTab", "offscreen"],
   "options_page": "options.html",
   "background": {
     "service_worker": "background.js",
