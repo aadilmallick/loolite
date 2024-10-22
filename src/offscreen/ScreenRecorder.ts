@@ -2,7 +2,7 @@ export class ScreenRecorder {
   stream?: MediaStream;
   recorder?: MediaRecorder;
 
-  async startRecording() {
+  async startRecording(onStop?: () => void) {
     if (this.stream || this.recorder) {
       this.recorder.stop();
     }
@@ -32,6 +32,8 @@ export class ScreenRecorder {
       document.body.removeChild(a);
 
       URL.revokeObjectURL(url);
+
+      onStop && onStop();
     });
   }
 

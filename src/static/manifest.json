@@ -1,7 +1,7 @@
 {
   "name": "EZ Screen Recorder",
   "description": "Quick and Easy Screen Recorder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "manifest_version": 3,
   "icons": {
     "16": "icon.png",

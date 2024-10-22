@@ -1,4 +1,6 @@
 import {
+  currentlyRecording,
+  notCurrentlyRecording,
   startRecordingChannel,
   stopRecordingChannel,
 } from "../background/controllers/messages";
@@ -12,10 +14,16 @@ import "./popup.css";
 const HTMLContent = html`
   <section>
     <h1 class="text-2xl font-bold">Screen Recorder</h1>
-    <button class="bg-black text-white px-4 py-2 rounded-lg" id="start">
+    <button
+      class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+      id="start"
+    >
       Start Recording
     </button>
-    <button class="bg-black text-white px-4 py-2 rounded-lg" id="stop">
+    <button
+      class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+      id="stop"
+    >
       Stop Recording
     </button>
   </section>
@@ -35,6 +43,8 @@ const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
  * The only way to keep the recording going across navigations is to use an offscreen document.
  */
 
+stopRecording.disabled = true;
+
 startRecording.addEventListener("click", async () => {
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content",
@@ -51,4 +61,14 @@ stopRecording.addEventListener("click", async () => {
     url: "offscreen.html",
   });
   stopRecordingChannel.sendP2P(undefined);
+});
+
+currentlyRecording.listen(() => {
+  stopRecording.disabled = false;
+  startRecording.disabled = true;
+});
+
+notCurrentlyRecording.listen(() => {
+  stopRecording.disabled = true;
+  startRecording.disabled = false;
 });
