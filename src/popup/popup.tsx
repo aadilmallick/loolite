@@ -1,12 +1,12 @@
 import {
+  canceledRecording,
   currentlyRecording,
   notCurrentlyRecording,
   startRecordingChannel,
   stopRecordingChannel,
 } from "../background/controllers/messages";
+import { appStorage } from "../background/controllers/storage";
 import Offscreen from "../chrome-api/offscreen";
-import Scripting, { ContentScriptModel } from "../chrome-api/scripting";
-import Tabs from "../chrome-api/tabs";
 import "../index.css";
 import { DOM, html } from "../utils/Dom";
 import "./popup.css";
@@ -14,6 +14,10 @@ import "./popup.css";
 const HTMLContent = html`
   <section>
     <h1 class="text-2xl font-bold">Screen Recorder</h1>
+    <div class="p-2">
+      <label htmlFor="mic" class="text-gray-500 text-sm">Record mic?</label>
+      <input type="checkbox" name="mic" id="mic" />
+    </div>
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
       id="start"
@@ -34,6 +38,7 @@ document.body.appendChild(app);
 
 const startRecording = app.querySelector("#start") as HTMLButtonElement;
 const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
+const recordMicCheckbox = app.querySelector("#mic") as HTMLInputElement;
 
 /**
  * * The reason why we must use an offscreen document
@@ -45,30 +50,64 @@ const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
 
 stopRecording.disabled = true;
 
+function onIsRecording() {
+  stopRecording.disabled = false;
+  startRecording.disabled = true;
+}
+
+function onNotRecording() {
+  stopRecording.disabled = true;
+  startRecording.disabled = false;
+  appStorage.set("isRecording", false);
+}
+
+async function handleRecordingStatus() {
+  const isRecording = await appStorage.get("isRecording");
+  if (isRecording) {
+    onIsRecording();
+  } else {
+    onNotRecording();
+  }
+}
+
+handleRecordingStatus();
+
 startRecording.addEventListener("click", async () => {
+  // const stream = await navigator.mediaDevices.getUserMedia({
+  //   audio: true,
+  //   video: false,
+  // });
   await Offscreen.setupOffscreenDocument({
-    justification: "to record screen content",
-    reasons: Offscreen.getReasons(["DISPLAY_MEDIA"]),
+    justification: "to record screen content and record audio",
+    reasons: Offscreen.getReasons(["DISPLAY_MEDIA", "USER_MEDIA"]),
     url: "offscreen.html",
   });
-  startRecordingChannel.sendP2P(undefined);
+  const isChecked = recordMicCheckbox.checked;
+  startRecordingChannel.sendP2P({
+    recordAudio: isChecked,
+  });
 });
 
 stopRecording.addEventListener("click", async () => {
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content",
-    reasons: Offscreen.getReasons(["DISPLAY_MEDIA"]),
+    reasons: Offscreen.getReasons(["DISPLAY_MEDIA", "USER_MEDIA"]),
     url: "offscreen.html",
   });
   stopRecordingChannel.sendP2P(undefined);
 });
 
 currentlyRecording.listen(() => {
-  stopRecording.disabled = false;
-  startRecording.disabled = true;
+  onIsRecording();
+  appStorage.set("isRecording", true);
 });
 
 notCurrentlyRecording.listen(() => {
-  stopRecording.disabled = true;
-  startRecording.disabled = false;
+  onNotRecording();
+  appStorage.set("isRecording", false);
+});
+
+canceledRecording.listen(() => {
+  onNotRecording();
+  appStorage.set("isRecording", false);
 });

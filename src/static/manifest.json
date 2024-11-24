@@ -1,7 +1,7 @@
 {
   "name": "EZ Screen Recorder",
   "description": "Quick and Easy Screen Recorder",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "manifest_version": 3,
   "icons": {
     "16": "icon.png",
@@ -13,7 +13,7 @@
     "default_title": "EZ Screen Recorder",
     "default_icon": "icon.png"
   },
-  "permissions": ["activeTab", "offscreen"],
+  "permissions": ["activeTab", "offscreen", "storage"],
   "options_page": "options.html",
   "background": {
     "service_worker": "background.js",
