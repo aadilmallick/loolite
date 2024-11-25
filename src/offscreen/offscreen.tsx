@@ -21,7 +21,9 @@ startRecordingChannel.listenAsync(async ({ recordAudio }) => {
   const isRecording = await screenRecorder.isRecording();
   if (isRecording) {
     window.close();
-    return;
+    return {
+      recordingSuccess: true,
+    };
   }
   const recordingSuccess = await screenRecorder.startVideoRecording({
     onStop: () => {
@@ -41,25 +43,24 @@ startRecordingChannel.listenAsync(async ({ recordAudio }) => {
     },
     recordMic: recordAudio,
   });
-  if (recordingSuccess) {
-    currentlyRecording.sendP2P(undefined);
-  } else {
-    canceledRecording.sendP2P(undefined);
-  }
+  return {
+    recordingSuccess,
+  };
 });
 
-stopRecordingChannel.listenAsync(async () => {
+stopRecordingChannel.listenAsync(async (payload) => {
   // if not recording, don't do anything.
   const isRecording = await screenRecorder.isRecording();
-  logChannel.sendP2P({
-    message: "in stoprecording channel is recording: " + isRecording,
-  });
   if (isRecording) {
     await screenRecorder.stopRecording();
     // try removing this and see if it changes anything.
-    notCurrentlyRecording.sendP2P(undefined);
+    return {
+      recordingStoppedSuccessfully: true,
+    };
   } else {
-    logChannel.sendP2P({ message: "not recording, so not stopping" });
     closeOffscreenWindow();
+    return {
+      recordingStoppedSuccessfully: false,
+    };
   }
 });

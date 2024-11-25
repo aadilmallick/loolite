@@ -29,7 +29,7 @@ export class ScreenRecorder {
   recorderStream?: MediaStream;
   micStream?: MediaStream;
 
-  static async requestMicPermission() {
+  static async checkMicPermission() {
     const result = await navigator.permissions.query({
       name: "microphone" as PermissionName,
     });

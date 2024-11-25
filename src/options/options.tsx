@@ -35,93 +35,119 @@ const micButton = appElement.querySelector("#mic") as HTMLButtonElement;
 const videoButton = appElement.querySelector("#video") as HTMLButtonElement;
 const screenButton = appElement.querySelector("#screen") as HTMLButtonElement;
 
-const state = {
-  micButtonRecording: false,
-  videoButtonRecording: false,
-  screenButtonRecording: false,
-};
+function createReactiveProxy<T extends string, V>(
+  key: T,
+  value: V,
+  onSet: (newValue: V) => void
+) {
+  const proxy = new Proxy({ [key]: value } as Record<T, V>, {
+    set(target, p, newValue, receiver) {
+      onSet(newValue);
+      return Reflect.set(target, p, newValue, receiver);
+    },
+  });
+  return proxy;
+}
+
+const micButtonRecording = createReactiveProxy(
+  "value",
+  false,
+  async (newValue) => {
+    if (newValue) {
+      toast.toast("Recording started");
+      micButton.textContent = "Recording...";
+    } else {
+      micButton.textContent = "Record Audio";
+      toast.success("Recording stopped");
+    }
+  }
+);
+
+const videoButtonRecording = createReactiveProxy(
+  "value",
+  false,
+  async (newValue) => {
+    if (newValue) {
+      toast.toast("Recording started");
+      videoButton.textContent = "Recording...";
+    } else {
+      videoButton.textContent = "Record Mic and video";
+      toast.success("Recording stopped");
+    }
+  }
+);
+
+const screenButtonRecording = createReactiveProxy(
+  "value",
+  false,
+  async (newValue) => {
+    if (newValue) {
+      toast.toast("Recording started");
+      screenButton.textContent = "Recording...";
+    } else {
+      screenButton.textContent = "Record Screen only";
+      toast.success("Recording stopped");
+    }
+  }
+);
 
 screenButton.addEventListener("click", async () => {
-  if (state.screenButtonRecording) {
+  if (screenButtonRecording.value) {
     await screenRecorder.stopRecording();
-    screenButton.textContent = "Record Screen only";
-    toast.success("Recording stopped");
-    state.screenButtonRecording = false;
     return;
   }
   const recordingSucceeded = await screenRecorder.startVideoRecording({
     recordMic: false,
     onStop: () => {
-      screenButton.textContent = "Record Screen only";
-      toast.success("Recording stopped");
-      state.screenButtonRecording = false;
+      screenButtonRecording.value = false;
     },
   });
   console.log("recordingSucceeded", recordingSucceeded);
   if (recordingSucceeded) {
-    toast.toast("Recording started");
-    screenButton.textContent = "Recording...";
-    state.screenButtonRecording = true;
+    screenButtonRecording.value = true;
   } else {
     toast.danger("Recording failed");
+    screenButtonRecording.value = false;
   }
 });
 
 videoButton.addEventListener("click", async () => {
-  if (state.videoButtonRecording) {
+  if (videoButtonRecording.value) {
     await screenRecorder.stopRecording();
-    videoButton.textContent = "Record Mic and video";
-    toast.success("Recording stopped");
-    state.videoButtonRecording = false;
     return;
   }
   const recordingSucceeded = await screenRecorder.startVideoRecording({
     recordMic: true,
     onRecordingCanceled: () => {
-      videoButton.textContent = "Record Mic and video";
-      toast.warning("Recording canceled");
-      state.videoButtonRecording = false;
+      videoButtonRecording.value = false;
     },
     onRecordingFailed: () => {
-      videoButton.textContent = "Record Mic and video";
-      toast.danger("Recording failed");
-      state.videoButtonRecording = false;
+      videoButtonRecording.value = false;
     },
     onStop: () => {
-      videoButton.textContent = "Record Mic and video";
-      toast.success("Recording stopped");
-      state.videoButtonRecording = false;
+      videoButtonRecording.value = false;
     },
   });
   console.log("recordingSucceeded", recordingSucceeded);
   if (recordingSucceeded) {
-    toast.toast("Recording started");
-    videoButton.textContent = "Recording...";
-    state.videoButtonRecording = true;
+    videoButtonRecording.value = true;
   }
 });
 
 micButton.addEventListener("click", async () => {
-  if (state.micButtonRecording) {
+  console.log("micButtonRecording", micButtonRecording.value);
+  if (micButtonRecording.value) {
     await screenRecorder.stopRecording();
-    micButton.textContent = "Record Audio";
-    toast.success("Recording stopped");
-    state.micButtonRecording = false;
     return;
   }
   const recordingSucceeded = await screenRecorder.startAudioRecording({
     onStop: () => {
-      micButton.textContent = "Record Audio";
-      toast.success("Recording stopped");
-      state.micButtonRecording = false;
+      console.log("stopping recording..");
+      micButtonRecording.value = false;
     },
   });
   console.log("recordingSucceeded", recordingSucceeded);
   if (recordingSucceeded) {
-    toast.toast("Recording started");
-    micButton.textContent = "Recording...";
-    state.micButtonRecording = true;
-  } else {
-    toast.danger("Recording failed");
+    micButtonRecording.value = true;
   }
 });

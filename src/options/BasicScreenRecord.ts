@@ -202,8 +202,6 @@ export class BasicScreenRecorder {
   }
 
   async stopRecording() {
-    console.log("stopping recording");
-    console.log("combined stream tracks", this.stream.getTracks());
     this.stream.getTracks().forEach((track) => track.stop());
     // this.micStream?.getTracks().forEach((track) => track.stop());
     // this.recorderStream?.getTracks().forEach((track) => track.stop());

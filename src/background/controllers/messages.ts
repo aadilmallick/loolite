@@ -4,9 +4,16 @@ export const startRecordingChannel = new MessagesOneWay<
   {
     recordAudio: boolean;
   },
-  undefined
+  {
+    recordingSuccess: boolean;
+  }
 >("startRecording");
-export const stopRecordingChannel = new MessagesOneWay("stopRecording");
+export const stopRecordingChannel = new MessagesOneWay<
+  undefined,
+  {
+    recordingStoppedSuccessfully: boolean;
+  }
+>("stopRecording");
 
 export const currentlyRecording = new MessagesOneWay("currentlyRecording");
 export const canceledRecording = new MessagesOneWay("canceledRecording");

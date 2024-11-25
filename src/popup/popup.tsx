@@ -74,21 +74,38 @@ async function handleRecordingStatus() {
 
 handleRecordingStatus();
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 startRecording.addEventListener("click", async () => {
-  // const stream = await navigator.mediaDevices.getUserMedia({
-  //   audio: true,
-  //   video: false,
-  // });
+  const isChecked = recordMicCheckbox.checked;
+  // request audio permissions if checked
+  if (isChecked) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      console.log("stream", stream);
+    } catch (e) {
+      return;
+    }
+  }
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content and record audio",
     reasons: Offscreen.getReasons(["DISPLAY_MEDIA", "USER_MEDIA"]),
     url: "offscreen.html",
   });
-  const isChecked = recordMicCheckbox.checked;
-  startRecordingChannel.sendP2P({
+  startRecording.disabled = true;
+  await sleep(500);
+  const response = await startRecordingChannel.sendP2PAsync({
     recordAudio: isChecked,
   });
-  startRecording.disabled = true;
+  console.log("response", response);
+  if (response?.recordingSuccess) {
+    onIsRecording();
+  } else {
+    onNotRecording();
+  }
 });
 
 // when you click stop button, send stop message to offscreen document
@@ -98,7 +115,12 @@ stopRecording.addEventListener("click", async () => {
     reasons: Offscreen.getReasons(["DISPLAY_MEDIA", "USER_MEDIA"]),
     url: "offscreen.html",
   });
-  stopRecordingChannel.sendP2P(undefined);
+  const response = await stopRecordingChannel.sendP2PAsync(undefined);
+  console.log("response", response);
+  if (response.recordingStoppedSuccessfully) {
+    onNotRecording();
+    await appStorage.set("isRecording", false);
+  }
 });
 
 currentlyRecording.listen(() => {
@@ -106,10 +128,10 @@ currentlyRecording.listen(() => {
   appStorage.set("isRecording", true);
 });
 
-notCurrentlyRecording.listen(() => {
-  onNotRecording();
-  appStorage.set("isRecording", false);
-});
+// notCurrentlyRecording.listen(() => {
+//   onNotRecording();
+//   appStorage.set("isRecording", false);
+// });
 
 canceledRecording.listen(() => {
   onNotRecording();
