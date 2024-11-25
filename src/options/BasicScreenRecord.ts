@@ -1,5 +1,3 @@
-import { logChannel } from "../background/controllers/messages";
-
 interface StartRecording {
   onStop?: () => void;
   onRecordingCanceled?: () => void;

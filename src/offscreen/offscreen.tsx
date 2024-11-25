@@ -8,6 +8,12 @@ import {
 } from "../background/controllers/messages";
 import { ScreenRecorder } from "./ScreenRecorder";
 
+function closeOffscreenWindow() {
+  setTimeout(() => {
+    window.close();
+  }, 750);
+}
+
 const screenRecorder = new ScreenRecorder();
 
 startRecordingChannel.listenAsync(async ({ recordAudio }) => {
@@ -17,12 +23,21 @@ startRecordingChannel.listenAsync(async ({ recordAudio }) => {
     window.close();
     return;
   }
-  const recordingSuccess = await screenRecorder.startRecording({
+  const recordingSuccess = await screenRecorder.startVideoRecording({
     onStop: () => {
-      window.close();
+      console.log("recording stopped");
+      notCurrentlyRecording.sendP2P(undefined);
+      closeOffscreenWindow();
     },
     onRecordingCanceled: () => {
-      window.close();
+      console.log("recording canceled");
+      canceledRecording.sendP2P(undefined);
+      closeOffscreenWindow();
+    },
+    onRecordingFailed() {
+      console.log("recording failed");
+      canceledRecording.sendP2P(undefined);
+      closeOffscreenWindow();
     },
     recordMic: recordAudio,
   });
@@ -41,9 +56,10 @@ stopRecordingChannel.listenAsync(async () => {
   });
   if (isRecording) {
     await screenRecorder.stopRecording();
+    // try removing this and see if it changes anything.
     notCurrentlyRecording.sendP2P(undefined);
   } else {
     logChannel.sendP2P({ message: "not recording, so not stopping" });
-    window.close();
+    closeOffscreenWindow();
   }
 });

@@ -53,6 +53,7 @@ stopRecording.disabled = true;
 function onIsRecording() {
   stopRecording.disabled = false;
   startRecording.disabled = true;
+  appStorage.set("isRecording", true);
 }
 
 function onNotRecording() {
@@ -63,6 +64,7 @@ function onNotRecording() {
 
 async function handleRecordingStatus() {
   const isRecording = await appStorage.get("isRecording");
+  console.log(`popup opened, isRecording = ${isRecording}`);
   if (isRecording) {
     onIsRecording();
   } else {
@@ -86,8 +88,10 @@ startRecording.addEventListener("click", async () => {
   startRecordingChannel.sendP2P({
     recordAudio: isChecked,
   });
+  startRecording.disabled = true;
 });
 
+// when you click stop button, send stop message to offscreen document
 stopRecording.addEventListener("click", async () => {
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content",
