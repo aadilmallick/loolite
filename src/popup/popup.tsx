@@ -54,12 +54,14 @@ function onIsRecording() {
   stopRecording.disabled = false;
   startRecording.disabled = true;
   appStorage.set("isRecording", true);
+  chrome.action.setBadgeText({ text: "REC" });
 }
 
 function onNotRecording() {
   stopRecording.disabled = true;
   startRecording.disabled = false;
   appStorage.set("isRecording", false);
+  chrome.action.setBadgeText({ text: "" });
 }
 
 async function handleRecordingStatus() {
@@ -97,15 +99,9 @@ startRecording.addEventListener("click", async () => {
   });
   startRecording.disabled = true;
   await sleep(500);
-  const response = await startRecordingChannel.sendP2PAsync({
+  startRecordingChannel.sendP2P({
     recordAudio: isChecked,
   });
-  console.log("response", response);
-  if (response?.recordingSuccess) {
-    onIsRecording();
-  } else {
-    onNotRecording();
-  }
 });
 
 // when you click stop button, send stop message to offscreen document
@@ -128,10 +124,10 @@ currentlyRecording.listen(() => {
   appStorage.set("isRecording", true);
 });
 
-// notCurrentlyRecording.listen(() => {
-//   onNotRecording();
-//   appStorage.set("isRecording", false);
-// });
+notCurrentlyRecording.listen(() => {
+  onNotRecording();
+  appStorage.set("isRecording", false);
+});
 
 canceledRecording.listen(() => {
   onNotRecording();

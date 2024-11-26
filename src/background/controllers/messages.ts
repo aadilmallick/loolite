@@ -4,9 +4,7 @@ export const startRecordingChannel = new MessagesOneWay<
   {
     recordAudio: boolean;
   },
-  {
-    recordingSuccess: boolean;
-  }
+  undefined
 >("startRecording");
 export const stopRecordingChannel = new MessagesOneWay<
   undefined,

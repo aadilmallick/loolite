@@ -3,14 +3,11 @@ import { logChannel } from "./controllers/messages";
 import { appStorage } from "./controllers/storage";
 
 Runtime.onInstall({
-  updateCb: async () => {
+  onAll: async () => {
     await appStorage.setup();
     await appStorage.clear();
     await appStorage.setup();
     console.log(await appStorage.getAll());
-  },
-  installCb: async () => {
-    await appStorage.setup();
   },
 });
 
