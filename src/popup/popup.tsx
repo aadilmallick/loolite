@@ -8,6 +8,7 @@ import {
 import { appStorage } from "../background/controllers/storage";
 import Offscreen from "../chrome-api/offscreen";
 import "../index.css";
+import { ScreenRecorder } from "../offscreen/ScreenRecorder";
 import { DOM, html } from "../utils/Dom";
 import "./popup.css";
 
@@ -78,17 +79,39 @@ handleRecordingStatus();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-startRecording.addEventListener("click", async () => {
-  const isChecked = recordMicCheckbox.checked;
-  // request audio permissions if checked
-  if (isChecked) {
+async function handleMicPermission() {
+  const perm = await ScreenRecorder.checkMicPermission();
+  if (perm === "prompt") {
+    // redirect users to my options
+    chrome.runtime.openOptionsPage();
+    return false;
+  } else if (perm === "denied") {
+    // redirect users to change settings for my extension
+    const settingsUrl = `chrome://extensions/?id=${chrome.runtime.id}`;
+    chrome.tabs.create({ url: settingsUrl, active: true });
+    return false;
+  } else {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
       console.log("stream", stream);
+      return true;
     } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+}
+
+startRecording.addEventListener("click", async () => {
+  const isChecked = recordMicCheckbox.checked;
+  // request audio permissions if checked
+  if (isChecked) {
+    const isGranted = await handleMicPermission();
+    console.log("mic permission isGranted", isGranted);
+    if (!isGranted) {
       return;
     }
   }
