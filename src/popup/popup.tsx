@@ -4,6 +4,7 @@ import {
   notCurrentlyRecording,
   startRecordingChannel,
   stopRecordingChannel,
+  logToBackground,
 } from "../background/controllers/messages";
 import { appStorage } from "../background/controllers/storage";
 import Offscreen from "../chrome-api/offscreen";
@@ -135,24 +136,28 @@ stopRecording.addEventListener("click", async () => {
     url: "offscreen.html",
   });
   const response = await stopRecordingChannel.sendP2PAsync(undefined);
-  console.log("response", response);
+  logToBackground("popup", { response });
   if (response.recordingStoppedSuccessfully) {
     onNotRecording();
-    await appStorage.set("isRecording", false);
   }
 });
 
+// ! listening in popup is not advisable because
+// ! the listeners will clear up once popup closes.
+// ! setup majority of listeners in background script.
+
 currentlyRecording.listen(() => {
   onIsRecording();
-  appStorage.set("isRecording", true);
 });
 
 notCurrentlyRecording.listen(() => {
+  logToBackground(
+    "popup",
+    "message received from offscreen not currently recording"
+  );
   onNotRecording();
-  appStorage.set("isRecording", false);
 });
 
 canceledRecording.listen(() => {
   onNotRecording();
-  appStorage.set("isRecording", false);
 });

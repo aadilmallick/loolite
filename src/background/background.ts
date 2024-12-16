@@ -1,5 +1,9 @@
 import { Runtime } from "../chrome-api/runtime";
-import { logChannel } from "./controllers/messages";
+import {
+  canceledRecording,
+  logChannel,
+  notCurrentlyRecording,
+} from "./controllers/messages";
 import { appStorage } from "./controllers/storage";
 
 Runtime.onInstall({
@@ -11,6 +15,11 @@ Runtime.onInstall({
   },
 });
 
-logChannel.listen(({ message }) => {
-  console.log(message);
+logChannel.listen(({ message, sender }) => {
+  console.log(`from ${sender}:`, message);
+});
+
+notCurrentlyRecording.listen(() => {
+  appStorage.set("isRecording", false);
+  chrome.action.setBadgeText({ text: "" });
 });

@@ -1,10 +1,10 @@
 import {
   canceledRecording,
   currentlyRecording,
-  logChannel,
   notCurrentlyRecording,
   startRecordingChannel,
   stopRecordingChannel,
+  logToBackground,
 } from "../background/controllers/messages";
 import { ScreenRecorder } from "./ScreenRecorder";
 
@@ -25,22 +25,24 @@ startRecordingChannel.listenAsync(async ({ recordAudio }) => {
   }
   const recordingSuccess = await screenRecorder.startVideoRecording({
     onStop: () => {
-      console.log("recording stopped");
+      logToBackground("offscreen", "recording stopped");
       notCurrentlyRecording.sendP2P(undefined);
+      // canceledRecording.sendP2P(undefined);
       closeOffscreenWindow();
     },
     onRecordingCanceled: () => {
-      console.log("recording canceled");
+      logToBackground("offscreen", "recording canceled");
       canceledRecording.sendP2P(undefined);
       closeOffscreenWindow();
     },
     onRecordingFailed() {
-      console.log("recording failed");
+      logToBackground("offscreen", "recording failed");
       canceledRecording.sendP2P(undefined);
       closeOffscreenWindow();
     },
     recordMic: recordAudio,
   });
+  logToBackground("offscreen", { recordingSuccess });
   if (recordingSuccess) {
     currentlyRecording.sendP2P(undefined);
   } else {
@@ -59,6 +61,8 @@ stopRecordingChannel.listenAsync(async (payload) => {
       recordingStoppedSuccessfully: true,
     };
   } else {
+    logToBackground("offscreen", "not recording, so not stopping");
+    canceledRecording.sendP2P(undefined);
     closeOffscreenWindow();
     return {
       recordingStoppedSuccessfully: false,

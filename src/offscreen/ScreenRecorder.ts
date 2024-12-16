@@ -157,15 +157,15 @@ export class ScreenRecorder {
     } catch (e) {
       if (e instanceof DOMException) {
         console.warn("Permission denied: user canceled recording");
-        onRecordingCanceled?.();
+        await onRecordingCanceled?.();
         return false;
       } else if (e instanceof RecordingError) {
         e.log();
-        onRecordingFailed?.();
+        await onRecordingFailed?.();
         return false;
       } else {
         console.error(e);
-        onRecordingFailed?.();
+        await onRecordingFailed?.();
         return false;
       }
     }
@@ -191,7 +191,7 @@ export class ScreenRecorder {
       document.body.removeChild(a);
 
       URL.revokeObjectURL(url);
-      onStop && onStop();
+      onStop && (await onStop());
     });
     return true;
   }

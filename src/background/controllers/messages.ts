@@ -22,9 +22,18 @@ export const notCurrentlyRecording = new MessagesOneWay(
 export const logChannel = new MessagesOneWay<
   {
     message: any;
+    sender: "popup" | "offscreen";
   },
   undefined
 >("logChannel");
+
+export function logToBackground(sender: "popup" | "offscreen", message: any) {
+  console.log(message);
+  logChannel.sendP2P({
+    message,
+    sender,
+  });
+}
 
 // define static methods here
 export class MessageHandler {}
