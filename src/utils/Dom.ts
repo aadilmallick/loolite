@@ -92,6 +92,36 @@ export class CSSVariablesManager<T = Record<string, string>> {
   }
 }
 
+export class CSSVariablesManagerWithDefaultData<
+  T extends Record<string, any> = Record<string, string>
+> {
+  constructor(private element: HTMLElement, defaultValues?: T) {
+    if (defaultValues) {
+      Object.entries(defaultValues).forEach(([key, value]) => {
+        this.set(key, value);
+      });
+    }
+  }
+
+  private formatName(name: string) {
+    if (name.startsWith("--")) {
+      return name;
+    }
+    return `--${name}`;
+  }
+
+  set<K extends keyof T>(name: K, value: T[K]) {
+    this.element.style.setProperty(
+      this.formatName(name as string),
+      String(value)
+    );
+  }
+
+  get(name: keyof T) {
+    return this.element.style.getPropertyValue(this.formatName(name as string));
+  }
+}
+
 export class LocalStorageBrowser<T extends Record<string, any>> {
   constructor(private prefix: string = "") {}
 

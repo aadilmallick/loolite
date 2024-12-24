@@ -46,6 +46,7 @@ const HTMLContent = html`
     >
       Stop Recording
     </button>
+    <!--
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
       id="inject"
@@ -58,6 +59,7 @@ const HTMLContent = html`
     >
       Remove Scripts
     </button>
+    -->
   </section>
 `;
 
@@ -69,52 +71,52 @@ const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
 const recordMicCheckbox = app.querySelector("#mic") as HTMLInputElement;
 const recordCameraCheckbox = app.querySelector("#camera") as HTMLInputElement;
 
-document.querySelector("#inject").addEventListener("click", async () => {
-  console.log("test button clicked");
-  // const tabs = (
-  //   await Tabs.getAllTabs({
-  //     allWindows: true,
-  //   })
-  // )
-  //   .filter((tab) => tab.url)
-  //   .filter((tab) => !tab.url.startsWith("chrome"));
-  // console.log("scriptable tabs", tabs);
-  // const tabIds = tabs.map((tab) => tab.id);
-  // console.log(tabIds);
-  // try {
-  //   const promises = tabIds.map((tabId) => {
-  //     return Scripting.executeScripts(
-  //       tabId,
-  //       WebAccessibleResources.getFileURIForProcess("camera.js"),
-  //       "ISOLATED"
-  //     );
-  //   });
-  //   await Promise.all(promises);
-  // } catch (e) {
-  //   console.error(e);
-  // }
-  const currentTab = await Tabs.getCurrentTab();
-  if (currentTab.url?.startsWith("http")) {
-    await injectCamera(currentTab.id);
-  }
-});
+// document.querySelector("#inject").addEventListener("click", async () => {
+//   console.log("test button clicked");
+//   // const tabs = (
+//   //   await Tabs.getAllTabs({
+//   //     allWindows: true,
+//   //   })
+//   // )
+//   //   .filter((tab) => tab.url)
+//   //   .filter((tab) => !tab.url.startsWith("chrome"));
+//   // console.log("scriptable tabs", tabs);
+//   // const tabIds = tabs.map((tab) => tab.id);
+//   // console.log(tabIds);
+//   // try {
+//   //   const promises = tabIds.map((tabId) => {
+//   //     return Scripting.executeScripts(
+//   //       tabId,
+//   //       WebAccessibleResources.getFileURIForProcess("camera.js"),
+//   //       "ISOLATED"
+//   //     );
+//   //   });
+//   //   await Promise.all(promises);
+//   // } catch (e) {
+//   //   console.error(e);
+//   // }
+//   const currentTab = await Tabs.getCurrentTab();
+//   if (currentTab.url?.startsWith("http")) {
+//     await injectCamera(currentTab.id);
+//   }
+// });
 
-document.querySelector("#remove").addEventListener("click", async () => {
-  const tabs = (
-    await Tabs.getAllTabs({
-      allWindows: true,
-    })
-  )
-    .filter((tab) => tab.url)
-    .filter((tab) => !tab.url.startsWith("chrome"));
-  console.log("scriptable tabs", tabs);
-  const tabIds = tabs.map((tab) => tab.id);
+// document.querySelector("#remove").addEventListener("click", async () => {
+//   const tabs = (
+//     await Tabs.getAllTabs({
+//       allWindows: true,
+//     })
+//   )
+//     .filter((tab) => tab.url)
+//     .filter((tab) => !tab.url.startsWith("chrome"));
+//   console.log("scriptable tabs", tabs);
+//   const tabIds = tabs.map((tab) => tab.id);
 
-  const promises = tabIds.map((tabId) => {
-    return removeCamera(tabId);
-  });
-  await Promise.all(promises);
-});
+//   const promises = tabIds.map((tabId) => {
+//     return removeCamera(tabId);
+//   });
+//   await Promise.all(promises);
+// });
 /**
  * * The reason why we must use an offscreen document
  * is because when doing navigator.mediaDevices.getUserMedia in
@@ -193,6 +195,7 @@ async function handleMicPermission() {
 
 async function handleCameraPermission() {
   const perm = await NavigatorPermissions.checkPermission("camera");
+  console.log("camera permission", perm);
   if (perm === "prompt") {
     // redirect users to my options
     chrome.runtime.openOptionsPage();
@@ -203,17 +206,7 @@ async function handleCameraPermission() {
     chrome.tabs.create({ url: settingsUrl, active: true });
     return false;
   } else {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: true,
-      });
-      console.log("stream", stream);
-      return true;
-    } catch (e) {
-      console.error(e);
-      return false;
-    }
+    return true;
   }
 }
 
@@ -281,8 +274,16 @@ async function injectCameraIntoCurrentTab() {
 currentlyRecording.listen(({ withCamera }) => {
   // injectCameraIntoCurrentTab();
   logToBackground("popup", { withCamera });
-  onIsRecording();
-  injectCameraIntoCurrentTab();
+  async function dookieShit() {
+    await onIsRecording();
+    await injectCameraIntoCurrentTab();
+
+    setTimeout(() => {
+      window.close();
+    }, 750);
+  }
+
+  dookieShit();
 });
 
 notCurrentlyRecording.listen(() => {
