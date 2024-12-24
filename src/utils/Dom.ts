@@ -3,6 +3,12 @@ export class DOM {
     const dom = new DOMParser().parseFromString(html, "text/html");
     return dom.body.firstElementChild as HTMLElement;
   }
+  static addStyleTag(css: string) {
+    const styles = document.createElement("style");
+    styles.textContent = css;
+    document.head.appendChild(styles);
+    return styles;
+  }
   static $ = (selector: string): HTMLElement | null =>
     document.querySelector(selector);
   static $$ = (selector: string): NodeListOf<HTMLElement> =>
@@ -40,6 +46,31 @@ export function css(strings: TemplateStringsArray, ...values: any[]) {
     str += string + (values[i] || "");
   });
   return str;
+}
+
+export function throttle<T extends (...args: any[]) => void>(
+  fn: T,
+  wait: number = 300
+) {
+  let inThrottle: boolean,
+    lastFn: ReturnType<typeof setTimeout>,
+    lastTime: number;
+  return function (this: any, ...args: any[]) {
+    const context = this;
+    if (!inThrottle) {
+      fn.apply(context, args);
+      lastTime = Date.now();
+      inThrottle = true;
+    } else {
+      clearTimeout(lastFn);
+      lastFn = setTimeout(() => {
+        if (Date.now() - lastTime >= wait) {
+          fn.apply(context, args);
+          lastTime = Date.now();
+        }
+      }, Math.max(wait - (Date.now() - lastTime), 0));
+    }
+  } as T;
 }
 
 export class CSSVariablesManager<T = Record<string, string>> {

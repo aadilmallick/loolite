@@ -5,7 +5,9 @@ import {
   startRecordingChannel,
   stopRecordingChannel,
   logToBackground,
+  recordCameraChannel,
 } from "../background/controllers/messages";
+import Tabs from "../chrome-api/tabs";
 import { ScreenRecorder } from "./ScreenRecorder";
 
 function closeOffscreenWindow() {
@@ -16,7 +18,8 @@ function closeOffscreenWindow() {
 
 const screenRecorder = new ScreenRecorder();
 
-startRecordingChannel.listenAsync(async ({ recordAudio }) => {
+startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
+  logToBackground("offscreen", { recordAudio, recordCamera });
   // if already recording, don't do anything.
   const isRecording = await screenRecorder.isRecording();
   if (isRecording) {
@@ -42,9 +45,15 @@ startRecordingChannel.listenAsync(async ({ recordAudio }) => {
     },
     recordMic: recordAudio,
   });
-  logToBackground("offscreen", { recordingSuccess });
+
+  const recordingType = ScreenRecorder.getScreenRecordingType(
+    screenRecorder.stream
+  );
   if (recordingSuccess) {
-    currentlyRecording.sendP2P(undefined);
+    recordCameraChannel.sendP2P({ recordingType });
+    currentlyRecording.sendP2P({
+      withCamera: recordCamera,
+    });
   } else {
     notCurrentlyRecording.sendP2P(undefined);
   }

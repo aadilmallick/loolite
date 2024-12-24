@@ -3,6 +3,7 @@ import { MessagesOneWay } from "../../chrome-api/messages";
 export const startRecordingChannel = new MessagesOneWay<
   {
     recordAudio: boolean;
+    recordCamera: boolean;
   },
   undefined
 >("startRecording");
@@ -13,7 +14,21 @@ export const stopRecordingChannel = new MessagesOneWay<
   }
 >("stopRecording");
 
-export const currentlyRecording = new MessagesOneWay("currentlyRecording");
+export const currentlyRecording = new MessagesOneWay<
+  {
+    withCamera: boolean;
+  },
+  undefined
+>("currentlyRecording");
+export const recordCameraChannel = new MessagesOneWay<
+  {
+    recordingType: "monitor" | "window" | "browser";
+  },
+  undefined
+>("recordCamera");
+export const stopRecordCameraChannel = new MessagesOneWay<undefined, undefined>(
+  "stopRecordCamera"
+);
 export const canceledRecording = new MessagesOneWay("canceledRecording");
 export const notCurrentlyRecording = new MessagesOneWay(
   "notCurrentlyRecording"

@@ -14,6 +14,24 @@ type Selector = {
   <E extends Element = Element>(selectors: string): E | null;
 };
 
+function querySelectorWithThrow(containerElement: HTMLElement | ShadowRoot) {
+  const select = containerElement.querySelector.bind(
+    containerElement
+  ) as Selector;
+  return ((_class: keyof HTMLElementTagNameMap) => {
+    const query = select(_class);
+    if (!query) throw new Error(`Element with selector ${_class} not found`);
+    return query;
+  }) as Selector;
+}
+
+/**
+ * Tips for using this class:
+ *
+ * 1. Always call connectedCallback() and always do super.connectedCallback() in the child class.
+ * Always do DOM stuff in connectedCallback() and not in the constructor.
+ */
+
 export default abstract class WebComponent<
   T extends readonly string[] = readonly string[]
 > extends HTMLElement {
@@ -21,6 +39,7 @@ export default abstract class WebComponent<
   protected styles: HTMLStyleElement;
   protected template: HTMLTemplateElement;
   public $: Selector;
+  public $throw: Selector;
 
   static register(name: string, _class: CustomElementConstructor): void {
     if (!customElements.get(name)) {
@@ -53,37 +72,56 @@ export default abstract class WebComponent<
     this.styles.textContent = css;
   }
 
+  private templateId: string;
   constructor(options: {
     templateId: string; // template id
-    HTMLContent: string; // html content of template
+    HTMLContent?: string; // html content of template
     cssFileName?: string; // filename of css to apply on template, if provided
     cssContent?: string; // css content to apply on template, if provided
   }) {
     // 1. always call super()
     super();
+    this.templateId = options.templateId;
     // 2. create shadow DOM and create template
     this.shadow = this.attachShadow({ mode: "open" });
+    this.$ = this.shadow.querySelector.bind(this.shadow);
+    this.$throw = querySelectorWithThrow(this.shadow);
+
     this.styles = document.createElement("style");
     this.template = WebComponent.createTemplate(
       options.templateId,
-      options.HTMLContent
+      options.HTMLContent ??
+        (this.constructor as typeof WebComponent).HTMLContent
     );
-    // create utility selector
-    this.$ = this.template.content.querySelector.bind(this.template.content);
+
     // 3. attach styles
     if (options.cssContent) this.styles.textContent = options.cssContent;
     else if (options.cssFileName) this.loadExternalCSS(options.cssFileName);
+    else
+      this.styles.textContent = (
+        this.constructor as typeof WebComponent
+      ).CSSContent;
+  }
+
+  static get HTMLContent() {
+    return "";
+  }
+
+  static get CSSContent() {
+    return "";
   }
 
   // called when element is inserted to the DOM
   connectedCallback() {
     this.createComponent();
+    console.log(`${this.templateId}: connectedCallback finished executing`);
   }
 
-  createComponent() {
+  private createComponent() {
     const content = this.template.content.cloneNode(true);
     this.shadow.appendChild(this.styles);
     this.shadow.appendChild(content);
+    // create utility selector
   }
 
   // triggered when element is removed from document
@@ -99,9 +137,9 @@ export default abstract class WebComponent<
   // region ATTRIBUTES
 
   // override this getter to specify which attributes to observe
-  //   static get observedAttributes() {
-  //     return [] as string[];
-  //   }
+  static get observedAttributes() {
+    return [] as readonly string[];
+  }
 
   // gets an attribute from the observedAttributes
   getObservableAttr(attrName: T[number]) {
@@ -119,12 +157,12 @@ export default abstract class WebComponent<
     this.removeAttribute(attrName);
   }
 
-  // listens to changes fo attributes from the observedAttributes
+  // listens to changes of attributes from the observedAttributes
   attributeChangedCallback(
     attrName: T[number],
     oldVal: string,
     newVal: string
   ) {
-    console.log("observedAttributes changed");
+    console.log("attributeChangedCallback run", attrName, oldVal, newVal);
   }
 }

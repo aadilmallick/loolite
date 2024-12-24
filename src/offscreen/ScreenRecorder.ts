@@ -25,8 +25,8 @@ class MicNotEnabledError extends RecordingError {
 
 export class ScreenRecorder {
   stream?: MediaStream;
-  recorder?: MediaRecorder;
-  recorderStream?: MediaStream;
+  private recorder?: MediaRecorder;
+  private recorderStream?: MediaStream;
   micStream?: MediaStream;
 
   static async checkMicPermission() {
@@ -38,7 +38,7 @@ export class ScreenRecorder {
 
   private async getStream({ recordMic }: { recordMic: boolean }) {
     const recorderStream = await navigator.mediaDevices.getDisplayMedia({
-      audio: true,
+      audio: recordMic,
       video: true,
     });
     this.recorderStream = recorderStream;
@@ -49,7 +49,7 @@ export class ScreenRecorder {
     });
 
     // if recording window (no system audio), then just join with mic.
-    if (recorderStream.getAudioTracks().length === 0) {
+    if (recorderStream.getAudioTracks().length === 0 && recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
@@ -59,8 +59,7 @@ export class ScreenRecorder {
         ...audioStream.getAudioTracks(),
       ]);
       return combinedStream;
-    }
-    if (recordMic) {
+    } else if (recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
@@ -133,6 +132,18 @@ export class ScreenRecorder {
       options?.onStop?.();
     });
     return true;
+  }
+
+  static getScreenRecordingType(stream: MediaStream) {
+    if (!stream || !stream.getVideoTracks().length) {
+      throw new Error(
+        "No video tracks found in stream when getting screen recording type"
+      );
+    }
+    return stream.getVideoTracks()[0].getSettings().displaySurface as
+      | "monitor"
+      | "window"
+      | "browser";
   }
 
   async startVideoRecording({

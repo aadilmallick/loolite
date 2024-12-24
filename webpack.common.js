@@ -10,6 +10,8 @@ module.exports = {
     options: path.resolve("src/options/options.tsx"),
     background: path.resolve("src/background/background.ts"),
     contentScript: path.resolve("src/contentScript/contentScript.tsx"),
+    camera: path.resolve("src/contentScript/camera.tsx"),
+    video: path.resolve("src/contentScript/video.tsx"),
   },
   module: {
     rules: [
@@ -43,7 +45,7 @@ module.exports = {
         },
       ],
     }),
-    ...getHtmlPlugins(["popup", "options", "offscreen"]),
+    ...getHtmlPlugins(["popup", "options", "offscreen", "video"]),
   ],
   output: {
     filename: "[name].js",
@@ -52,7 +54,11 @@ module.exports = {
   optimization: {
     splitChunks: {
       chunks(chunk) {
-        return chunk.name !== "contentScript" && chunk.name !== "background";
+        return (
+          chunk.name !== "contentScript" &&
+          chunk.name !== "background" &&
+          chunk.name !== "camera"
+        );
       },
     },
   },

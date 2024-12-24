@@ -1,7 +1,7 @@
 {
-  "name": "EZ Screen Recorder",
+  "name": "Loolite",
   "description": "Quick and Easy Screen Recorder",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "manifest_version": 3,
   "icons": {
     "16": "icon.png",
@@ -10,13 +10,20 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "EZ Screen Recorder",
+    "default_title": "Loolite: Screen Recorder",
     "default_icon": "icon.png"
   },
-  "permissions": ["activeTab", "offscreen", "storage"],
+  "permissions": ["activeTab", "offscreen", "storage", "scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
   "options_page": "options.html",
   "background": {
     "service_worker": "background.js",
     "type": "module"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["camera.html", "camera.js", "video.html", "video.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

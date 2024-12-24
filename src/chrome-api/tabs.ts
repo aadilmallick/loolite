@@ -49,8 +49,21 @@ export default class Tabs {
   /**
    * Gets all tabs from the current window, or a different window if you specify the windowId
    */
-  static async getAllTabs(windowId?: number) {
-    return await chrome.tabs.query({ windowId });
+  static async getAllTabs(options?: {
+    windowId?: number;
+    allWindows?: boolean;
+  }) {
+    if (options?.allWindows) {
+      const windows = await chrome.windows.getAll();
+      const tabs: chrome.tabs.Tab[] = [];
+      for (const window of windows) {
+        const windowTabs = await chrome.tabs.query({ windowId: window.id });
+        tabs.push(...windowTabs);
+      }
+      return tabs;
+    } else {
+      return await chrome.tabs.query({ windowId: options?.windowId });
+    }
   }
 
   static Audio = {
