@@ -117,7 +117,6 @@ const styles = css`
     height: 100%;
     object-fit: cover;
     border: none;
-    border-radius: 10px;
     background: black;
     pointer-events: none;
     transform: scaleX(-1);

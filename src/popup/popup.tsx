@@ -34,6 +34,12 @@ const HTMLContent = html`
       >
       <input type="checkbox" name="camera" id="camera" />
     </div>
+    <div class="p-2">
+      <label htmlFor="circle" class="text-gray-500 text-sm"
+        >Circle Frame?</label
+      >
+      <input type="checkbox" name="circle" id="circle" />
+    </div>
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
       id="start"
@@ -46,6 +52,14 @@ const HTMLContent = html`
     >
       Stop Recording
     </button>
+    <div class="p-2 text-center">
+      <button
+        class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+        id="reset"
+      >
+        Reset camera
+      </button>
+    </div>
     <!--
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
@@ -68,55 +82,11 @@ document.body.appendChild(app);
 
 const startRecording = app.querySelector("#start") as HTMLButtonElement;
 const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
+const resetCameraBtn = app.querySelector("#reset") as HTMLButtonElement;
 const recordMicCheckbox = app.querySelector("#mic") as HTMLInputElement;
 const recordCameraCheckbox = app.querySelector("#camera") as HTMLInputElement;
+const circleFrameCheckbox = app.querySelector("#circle") as HTMLInputElement;
 
-// document.querySelector("#inject").addEventListener("click", async () => {
-//   console.log("test button clicked");
-//   // const tabs = (
-//   //   await Tabs.getAllTabs({
-//   //     allWindows: true,
-//   //   })
-//   // )
-//   //   .filter((tab) => tab.url)
-//   //   .filter((tab) => !tab.url.startsWith("chrome"));
-//   // console.log("scriptable tabs", tabs);
-//   // const tabIds = tabs.map((tab) => tab.id);
-//   // console.log(tabIds);
-//   // try {
-//   //   const promises = tabIds.map((tabId) => {
-//   //     return Scripting.executeScripts(
-//   //       tabId,
-//   //       WebAccessibleResources.getFileURIForProcess("camera.js"),
-//   //       "ISOLATED"
-//   //     );
-//   //   });
-//   //   await Promise.all(promises);
-//   // } catch (e) {
-//   //   console.error(e);
-//   // }
-//   const currentTab = await Tabs.getCurrentTab();
-//   if (currentTab.url?.startsWith("http")) {
-//     await injectCamera(currentTab.id);
-//   }
-// });
-
-// document.querySelector("#remove").addEventListener("click", async () => {
-//   const tabs = (
-//     await Tabs.getAllTabs({
-//       allWindows: true,
-//     })
-//   )
-//     .filter((tab) => tab.url)
-//     .filter((tab) => !tab.url.startsWith("chrome"));
-//   console.log("scriptable tabs", tabs);
-//   const tabIds = tabs.map((tab) => tab.id);
-
-//   const promises = tabIds.map((tabId) => {
-//     return removeCamera(tabId);
-//   });
-//   await Promise.all(promises);
-// });
 /**
  * * The reason why we must use an offscreen document
  * is because when doing navigator.mediaDevices.getUserMedia in
@@ -126,6 +96,7 @@ const recordCameraCheckbox = app.querySelector("#camera") as HTMLInputElement;
  */
 
 stopRecording.disabled = true;
+resetCameraBtn.disabled = true;
 
 async function onIsRecording() {
   stopRecording.disabled = false;
@@ -148,14 +119,17 @@ async function onNotRecording() {
   const scriptableTabs = await getAllScriptableTabs();
   await Promise.all(
     scriptableTabs.map((tabId) => {
-      return removeCamera(tabId);
+      return removeCamera(tabId!);
     })
   );
 }
 
 async function handleRecordingStatus() {
   const isRecording = await appStorage.get("isRecording");
-  console.log(`popup opened, isRecording = ${isRecording}`);
+  const isCameraRecording = await appStorage.get("isRecordingCamera");
+  if (isRecording && isCameraRecording) {
+    resetCameraBtn.disabled = false;
+  }
   if (isRecording) {
     onIsRecording();
   } else {
@@ -163,7 +137,18 @@ async function handleRecordingStatus() {
   }
 }
 
+async function populateSettings() {
+  const circleFrame = await appStorage.get("circle");
+  console.log("circleFrame", circleFrame);
+  circleFrameCheckbox.checked = circleFrame;
+}
+
 handleRecordingStatus();
+populateSettings();
+
+circleFrameCheckbox.addEventListener("change", async () => {
+  await appStorage.set("circle", circleFrameCheckbox.checked);
+});
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -210,6 +195,14 @@ async function handleCameraPermission() {
   }
 }
 
+resetCameraBtn.addEventListener("click", async () => {
+  const currentTab = await Tabs.getCurrentTab();
+  if (!currentTab?.url?.startsWith("http")) return;
+
+  await removeCamera(currentTab.id!);
+  await injectCamera(currentTab.id!);
+});
+
 startRecording.addEventListener("click", async () => {
   const shouldRecordMic = recordMicCheckbox.checked;
   const shouldRecordCamera = recordCameraCheckbox.checked;
@@ -230,6 +223,7 @@ startRecording.addEventListener("click", async () => {
       return;
     }
     await appStorage.set("isRecordingCamera", true);
+    await appStorage.set("webcamCoordinates", null);
   }
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content and record audio",
@@ -266,7 +260,7 @@ async function injectCameraIntoCurrentTab() {
   const tabs = await chrome.tabs.query({ highlighted: true });
   tabs.forEach((tab) => {
     if (tab.url?.startsWith("http")) {
-      injectCamera(tab.id);
+      injectCamera(tab.id!);
     }
   });
 }

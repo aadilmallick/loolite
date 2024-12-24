@@ -38,13 +38,13 @@ export async function removeCamera(tabId: number) {
       }
     }
 
-    const styles = DOM.$(`#${this.tagName}-camera-iframe-styles`);
+    const styles = DOM.$("#content-script-ui-camera-iframe-styles");
     if (styles) {
       styles.remove();
     }
 
     const videoFrame = DOM.$(".shit-another-container");
-    console.log("videoFrame to remove", videoFrame);
+    console.log("scrptingcontroller: videoFrame to remove", videoFrame);
     if (videoFrame) {
       videoFrame.remove();
     }
@@ -63,7 +63,7 @@ export async function injectCameraIntoCurrentTab() {
   const tab = await Tabs.getCurrentTab();
   console.log(tab);
   if (!tab) throw new Error("no tab");
-  await injectCamera(tab.id);
+  await injectCamera(tab.id!);
 }
 export async function getAllScriptableTabs() {
   const tabs = await Tabs.getAllTabs({
@@ -71,6 +71,7 @@ export async function getAllScriptableTabs() {
   });
   return tabs
     .filter((tab) => tab.url)
-    .filter((tab) => tab.url.startsWith("http"))
+    .filter((tab) => tab.url!.startsWith("http"))
+    .filter((tab) => !tab.url!.startsWith("https://chrome.google.com/webstore"))
     .map((tab) => tab.id);
 }

@@ -1,3 +1,3 @@
 interface Window {
-  custom_stream: MediaStream;
+  custom_stream: MediaStream | null;
 }

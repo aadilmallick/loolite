@@ -62,6 +62,11 @@ export abstract class ChromeStorage<
     return data[key] as T[K];
   }
 
+  async getSafe<K extends keyof T>(key: K): Promise<T[K] | null> {
+    const data = (await this.storage.get([key])) as Record<K, T[K]>;
+    return data[key] as T[K];
+  }
+
   async getMultiple<K extends keyof T>(keys: K[]) {
     return (await this.storage.get(keys)) as Extract<T, Record<K, any>>;
   }

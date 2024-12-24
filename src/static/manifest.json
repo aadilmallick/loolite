@@ -1,7 +1,7 @@
 {
   "name": "Loolite",
   "description": "Quick and Easy Screen Recorder",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "manifest_version": 3,
   "icons": {
     "16": "icon.png",

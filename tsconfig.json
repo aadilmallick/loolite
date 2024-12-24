@@ -4,6 +4,8 @@
     "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "bundler",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "strict": true,
+    "keyofStringsOnly": false
   }
 }

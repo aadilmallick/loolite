@@ -26,22 +26,18 @@ logChannel.listen(({ message, sender }) => {
 });
 
 async function onStopRecording() {
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
   await Promise.all([
     appStorage.set("isRecording", false),
     appStorage.set("isRecordingCamera", false),
     chrome.action.setBadgeText({ text: "" }),
   ]);
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
 
   // remove camera from all injected tabs
   const scriptableTabs = await getAllScriptableTabs();
   console.log("scriptableTabs", scriptableTabs);
   await Promise.all(
     scriptableTabs.map((tabId) => {
-      return removeCamera(tabId);
+      return removeCamera(tabId!);
     })
   );
 }
@@ -56,7 +52,8 @@ Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
   if (!tab.url?.startsWith("http")) return;
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");
-  console.log({ isRecording, isCameraRecording });
+  console.log("%c current storage", "color: red; font-size: 20px");
+  console.log(await appStorage.getAll());
 
   isRecording && isCameraRecording && (await injectCamera(tabId));
 });
@@ -67,6 +64,7 @@ Tabs.Events.onTabNavigateComplete(async (tabId, tab) => {
 
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");
-  console.log({ isRecording, isCameraRecording });
+  console.log("%c current storage", "color: red; font-size: 20px");
+  console.log(await appStorage.getAll());
   isRecording && isCameraRecording && (await injectCamera(tabId));
 });

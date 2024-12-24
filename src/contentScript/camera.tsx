@@ -1,3 +1,4 @@
+import { appStorage } from "../background/controllers/storage";
 import { WebAccessibleResources } from "../chrome-api/webAccessibleResources";
 import { NavigatorPermissions } from "../offscreen/NavigatorPermissions";
 import { ToastManager } from "../options/Toast";
@@ -50,20 +51,45 @@ const CONSTANTS = {
   MIN_SIZE: 150,
 };
 
-function create() {
+async function getStoredCoordinates() {
+  const savedCoordinates = await appStorage.get("webcamCoordinates");
+  console.log("savedCoordinates", savedCoordinates);
+  if (savedCoordinates) {
+    return {
+      ...savedCoordinates,
+      mouseDown: false,
+    };
+  } else {
+    return {
+      x: -1,
+      y: -1,
+      mouseDown: false,
+    };
+  }
+}
+
+async function initCoordinates(iframeContainer: HTMLElement) {
+  const coordinates = await getStoredCoordinates();
+  if (coordinates.x === -1 && coordinates.y === -1) {
+    coordinates.x = iframeContainer.getBoundingClientRect().x;
+    coordinates.y = iframeContainer.getBoundingClientRect().y;
+  }
+  iframeContainer.style.left = `${coordinates.x}px`;
+  iframeContainer.style.top = `${coordinates.y}px`;
+  return coordinates;
+}
+
+async function create() {
   const iframeSrc = WebAccessibleResources.getFileURIForContent("video.html");
-  console.log("iframeSrc", iframeSrc);
   if (!iframeSrc) {
     manager.danger("iframeSrc is not defined");
     throw new Error("iframeSrc is not defined");
   }
 
-  const coordinates = {
-    x: 0,
-    y: 0,
-    mouseDown: false,
-  };
-  const videoFrame = ContentScriptUI.manualCreation(iframeSrc);
+  const circleFrame = await appStorage.get("circle");
+  const videoFrame = ContentScriptUI.manualCreation(iframeSrc, {
+    circleFrame: circleFrame,
+  });
   const iframeContainer = videoFrame.querySelector(
     "#camera-iframe-container"
   ) as HTMLElement;
@@ -74,10 +100,21 @@ function create() {
       size: 200,
     }
   );
-  coordinates.x = iframeContainer.getBoundingClientRect().x;
-  coordinates.y = iframeContainer.getBoundingClientRect().y;
-  console.log("coordinates", coordinates);
+  const coordinates = {
+    x: 0,
+    y: 0,
+    mouseDown: false,
+  };
 
+  // ! a botched attempt at getting the coordinates from the storage
+  // const coordinates = await getStoredCoordinates();
+  // if (coordinates.x === -1 && coordinates.y === -1) {
+  //   coordinates.x = iframeContainer.getBoundingClientRect().x;
+  //   coordinates.y = iframeContainer.getBoundingClientRect().y;
+  // }
+  // iframeContainer.style.left = `${coordinates.x}px`;
+  // iframeContainer.style.top = `${coordinates.y}px`;
+  // const coordinates = await initCoordinates(iframeContainer);
   iframeContainer.addEventListener("mousedown", (e) => {
     console.log("mouse down");
     coordinates.mouseDown = true;
@@ -94,8 +131,12 @@ function create() {
     variablesManager.set("size", newSize);
   });
 
-  iframeContainer.addEventListener("mouseup", (e) => {
+  iframeContainer.addEventListener("mouseup", async (e) => {
     coordinates.mouseDown = false;
+    await appStorage.set("webcamCoordinates", {
+      x: coordinates.x,
+      y: coordinates.y,
+    });
   });
 
   document.addEventListener(
@@ -112,6 +153,8 @@ function create() {
           Math.floor(iframeContainer.getBoundingClientRect().height / 2);
         iframeContainer.style.left = `${newX}px`;
         iframeContainer.style.top = `${newY}px`;
+        coordinates.x = newX;
+        coordinates.y = newY;
       }
     }, 50)
   );
@@ -185,9 +228,16 @@ function create() {
 
 console.log(
   "%c has element",
-  document.querySelector("#camera-iframe-container"),
-  "color:blue;"
+  "color:blue;",
+  document.querySelector("#camera-iframe-container")
 );
 if (!document.querySelector("#camera-iframe-container")) {
   create();
 }
+// else {
+//   const iframeContainer = document.querySelector(
+//     "#camera-iframe-container"
+//   ) as HTMLElement;
+//   if (!iframeContainer) throw new Error("iframeContainer is not defined");
+//   const coordinates = await initCoordinates(iframeContainer);
+// }

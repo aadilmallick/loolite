@@ -130,6 +130,101 @@ export class ContentScriptUI extends WebComponent {
     `;
   }
 
+  static getStyles({
+    borderRadius,
+    size,
+  }: {
+    borderRadius: number;
+    size: number;
+  }) {
+    return css`
+      #camera-iframe-container {
+        user-select: none;
+        width: var(--cameraSize, ${size}px);
+        aspect-ratio: 16 / 9;
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        border-radius: ${borderRadius}px;
+        border: 4px solid rebeccapurple;
+        z-index: 5000;
+        cursor: grab;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
+      }
+
+      #camera-iframe-container .iframe-container {
+        overflow: hidden;
+        background-color: black;
+        user-select: none;
+        width: 100%;
+        height: 100%;
+        border-radius: ${borderRadius}px;
+      }
+
+      #camera-iframe-container iframe {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border: none;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      #placeholder {
+        visibility: hidden;
+        position: absolute;
+        transform: translate(-600%, -600%);
+      }
+
+      #camera-iframe-container #actions {
+        position: absolute;
+        top: 0;
+        left: 0;
+        user-select: none;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        pointer-events: none;
+        background-color: rgba(57, 57, 57, 0.5);
+        transition: opacity 0.3s;
+        border-radius: ${borderRadius}px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        z-index: 9000;
+
+        p {
+          max-width: 25ch;
+          line-height: 1.5;
+          color: rgba(208, 208, 208, 0.8);
+          font-weight: 600;
+          font-size: 1rem;
+          margin: 0;
+          padding: 0;
+          text-align: center;
+        }
+
+        button {
+          border: none;
+          background: none;
+          cursor: pointer;
+          transition: opacity 0.3s;
+          font-size: 1.2rem;
+          user-select: none;
+          &:hover {
+            opacity: 0.7;
+          }
+        }
+      }
+
+      #camera-iframe-container .iframe-container:hover #actions {
+        opacity: 1;
+        pointer-events: all;
+      }
+    `;
+  }
+
   static registerSelf() {
     if (!customElements.get(this.tagName)) {
       WebComponent.register(this.tagName, this);
@@ -162,10 +257,23 @@ export class ContentScriptUI extends WebComponent {
     `;
   }
 
-  static manualCreation(iframeSrc: string) {
+  static manualCreation(
+    iframeSrc: string,
+    options?: {
+      circleFrame?: boolean;
+      size?: number;
+    }
+  ) {
     // 1) add css
     const styles = document.createElement("style");
-    styles.textContent = this.CSSContent;
+    if (options?.circleFrame) {
+      styles.textContent = this.CSSContent;
+    } else {
+      styles.textContent = this.getStyles({
+        borderRadius: options?.size || 12,
+        size: options?.size || this.width,
+      });
+    }
     styles.id = `${this.tagName}-camera-iframe-styles`;
 
     console.log("styles", styles);
@@ -174,7 +282,7 @@ export class ContentScriptUI extends WebComponent {
     // 2) add iframe
     const videoFrame = DOM.createDomElement(this.HTMLContent);
     console.log("videoFrame", videoFrame);
-    videoFrame.querySelector("iframe").src = iframeSrc;
+    videoFrame.querySelector("iframe")!.src = iframeSrc;
     document.body.appendChild(videoFrame);
 
     return videoFrame;
@@ -191,53 +299,6 @@ export class ContentScriptUI extends WebComponent {
     if (videoFrame) {
       videoFrame.remove();
     }
-  }
-
-  private variablesManager: CSSVariablesManagerWithDefaultData<{
-    cameraSize: `${number}px`;
-  }>;
-
-  private onGrow: () => void;
-  private onShrink: () => void;
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    console.log("%c connected callback called", "font-size: 2rem;");
-    const iframeSrc = this.getAttribute("data-iframe-url");
-    if (!iframeSrc) {
-      throw new Error("data-iframe-url attribute is required");
-    }
-    if (!this.$throw("iframe").src) {
-      this.$throw("iframe").src = iframeSrc;
-    }
-
-    this.variablesManager = new CSSVariablesManagerWithDefaultData(
-      this.$throw("#camera-iframe-container"),
-      {
-        cameraSize: "200px",
-      }
-    );
-    this.onGrow = this.onResize.bind(this, 20);
-    this.onShrink = this.onResize.bind(this, -20);
-
-    this.$throw("#grow").addEventListener("click", this.onGrow);
-    this.$throw("#shrink").addEventListener("click", this.onShrink);
-  }
-
-  private onResize(amount: number, event: MouseEvent) {
-    event.stopPropagation();
-    const size = ContentScriptUI.width;
-    const newSize = size + amount;
-    console.log("%c in on resize", "color: blue; font-size: 1rem;", newSize);
-    this.variablesManager.set("cameraSize", `${newSize}px`);
-    // this.$throw("iframe").width = `${newSize}`;
-    // this.$throw("iframe").height = `${newSize}`;
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.$throw("#grow").removeEventListener("click", this.onGrow);
-    this.$throw("#shrink").removeEventListener("click", this.onShrink);
   }
 }
 
