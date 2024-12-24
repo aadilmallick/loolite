@@ -144,6 +144,7 @@ export class CameraRecorder {
    * For programmatically stopping the recording.
    */
   async stopRecording() {
+    if (!this.stream || !this.recorder) return;
     console.log("stopping recording");
     console.log("combined stream tracks", this.stream.getTracks());
     this.stream.getTracks().forEach((track) => track.stop());

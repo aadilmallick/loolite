@@ -57,7 +57,7 @@ export default class Scripting {
     const result = await chrome.scripting.executeScript({
       target: { tabId },
       func: cb,
-      args: [{}],
+      args: [],
     });
     return result[0].result as T;
   }

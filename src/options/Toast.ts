@@ -138,7 +138,7 @@ export class ToastManager {
   }
 
   setup() {
-    const element = document.getElementById(this.toastsContainerId);
+    const element = document.getElementById(this.toastsContainerId)!;
     this.toastContainer = element;
     if (element) return;
 

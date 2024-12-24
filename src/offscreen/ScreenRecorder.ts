@@ -97,19 +97,24 @@ export class ScreenRecorder {
       this.recorder.stop();
     }
     let audioStream: MediaStream;
-    try {
-      audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-      });
-    } catch (e) {
-      if (e instanceof DOMException) {
-        options?.onRecordingCanceled?.();
-        return false;
+    async function shitBitch() {
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+        return audioStream;
+      } catch (e) {
+        if (e instanceof DOMException) {
+          options?.onRecordingCanceled?.();
+          return null;
+        }
       }
     }
-    this.stream = audioStream;
-    this.recorder = new MediaRecorder(this.stream);
+    const stream = await shitBitch();
+    if (stream === null) return false;
+    this.stream = stream;
+    this.recorder = new MediaRecorder(this.stream!);
 
     // Start recording.
     this.recorder.start();
@@ -213,16 +218,12 @@ export class ScreenRecorder {
    * For programmatically stopping the recording.
    */
   async stopRecording() {
+    if (!this.recorder || !this.stream) return;
     console.log("stopping recording");
     console.log("combined stream tracks", this.stream.getTracks());
     this.stream.getTracks().forEach((track) => track.stop());
-    // this.micStream?.getTracks().forEach((track) => track.stop());
-    // this.recorderStream?.getTracks().forEach((track) => track.stop());
     this.recorder.stop();
     this.recorder = undefined;
     this.chunks = [];
-
-    // this.micStream = undefined;
-    // this.recorderStream = undefined;
   }
 }

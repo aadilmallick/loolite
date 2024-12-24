@@ -102,37 +102,37 @@ export class BasicScreenRecorder {
         audio: true,
         video: false,
       });
+      this.stream = audioStream;
+      this.recorder = new MediaRecorder(this.stream);
+
+      // Start recording.
+      this.recorder.start();
+      this.recorder.addEventListener("dataavailable", async (event) => {
+        let recordedBlob = event.data;
+        let url = URL.createObjectURL(recordedBlob);
+
+        let a = document.createElement("a");
+
+        a.style.display = "none";
+        a.href = url;
+        a.download = "audio-recording.webm";
+
+        document.body.appendChild(a);
+        a.click();
+
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
+
+        options?.onStop?.();
+      });
+      return true;
     } catch (e) {
       if (e instanceof DOMException) {
         options?.onRecordingCanceled?.();
         return false;
       }
     }
-    this.stream = audioStream;
-    this.recorder = new MediaRecorder(this.stream);
-
-    // Start recording.
-    this.recorder.start();
-    this.recorder.addEventListener("dataavailable", async (event) => {
-      let recordedBlob = event.data;
-      let url = URL.createObjectURL(recordedBlob);
-
-      let a = document.createElement("a");
-
-      a.style.display = "none";
-      a.href = url;
-      a.download = "audio-recording.webm";
-
-      document.body.appendChild(a);
-      a.click();
-
-      document.body.removeChild(a);
-
-      URL.revokeObjectURL(url);
-
-      options?.onStop?.();
-    });
-    return true;
   }
 
   async startVideoRecording({
@@ -202,10 +202,10 @@ export class BasicScreenRecorder {
   }
 
   async stopRecording() {
-    this.stream.getTracks().forEach((track) => track.stop());
+    this.stream?.getTracks().forEach((track) => track.stop());
     // this.micStream?.getTracks().forEach((track) => track.stop());
     // this.recorderStream?.getTracks().forEach((track) => track.stop());
-    this.recorder.stop();
+    this.recorder?.stop();
     this.recorder = undefined;
 
     // this.micStream = undefined;
