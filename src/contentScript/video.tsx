@@ -177,8 +177,6 @@ function init() {
 }
 
 function destroy() {
-  const cameraVideo = DOM.$(`#${CONSTANTS.VIDEO_ID}`) as HTMLVideoElement;
-  if (!cameraVideo) return;
   if (window.custom_stream) {
     console.log("stopping stream", window.custom_stream);
     window.custom_stream.getTracks().forEach((track) => {
@@ -186,6 +184,8 @@ function destroy() {
     });
     window.custom_stream = null;
   }
+  const cameraVideo = DOM.$(`#${CONSTANTS.VIDEO_ID}`) as HTMLVideoElement;
+  if (!cameraVideo) return;
   cameraVideo.srcObject = null;
   cameraVideo.remove();
 }
@@ -230,6 +230,10 @@ function main() {
   cameraVideo.addEventListener("canplay", () => {
     console.log("%c removed loading overlay", "color: purple;");
     loadingOverlay.remove();
+  });
+
+  window.addEventListener("beforeunload", () => {
+    destroy();
   });
 }
 

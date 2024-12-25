@@ -5,6 +5,7 @@ import {
   startRecordingChannel,
   stopRecordingChannel,
   logToBackground,
+  cameraStyleChannel,
 } from "../background/controllers/messages";
 import {
   injectCamera,
@@ -17,9 +18,13 @@ import Scripting from "../chrome-api/scripting";
 import Tabs from "../chrome-api/tabs";
 import { WebAccessibleResources } from "../chrome-api/webAccessibleResources";
 import "../index.css";
+import { CameraRecorder } from "../offscreen/CameraRecorder";
 import { NavigatorPermissions } from "../offscreen/NavigatorPermissions";
 import { DOM, html } from "../utils/Dom";
+import Toaster from "../utils/web-components/Toaster";
 import "./popup.css";
+
+// region HTML
 
 const HTMLContent = html`
   <section>
@@ -40,6 +45,16 @@ const HTMLContent = html`
       >
       <input type="checkbox" name="circle" id="circle" />
     </div>
+    <div class="p-2">
+      <label htmlFor="developer-settings" class="text-gray-500 text-sm"
+        >Turn on developer settings</label
+      >
+      <input
+        type="checkbox"
+        name="developer-settings"
+        id="developer-settings"
+      />
+    </div>
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
       id="start"
@@ -52,12 +67,67 @@ const HTMLContent = html`
     >
       Stop Recording
     </button>
-    <div class="p-2 text-center">
+    <hr class="my-2" />
+    <div class="p-2 space-y-4" id="actions">
+      <div class="flex justify-around flex-wrap gap-2">
+        <button
+          class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          id="reset"
+        >
+          Reset camera
+        </button>
+        <button
+          class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          id="inject"
+        >
+          Inject camera
+        </button>
+        <button
+          class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          id="remove"
+        >
+          Remove camera
+        </button>
+      </div>
+      <div class="p-2">
+        <label htmlFor="border-color" class="text-gray-500 text-sm"
+          >Border-color?</label
+        >
+        <input type="color" name="border-color" id="border-color" />
+      </div>
+      <div class="p-2 flex items-center gap-2">
+        <label htmlFor="border-preset" class="text-gray-500 text-sm"
+          >Border preset?</label
+        >
+        <select
+          id="border-preset"
+          name="border-preset"
+          class="border-2 border-gray-300 p-1 rounded-lg w-full flex-1"
+        >
+          <option value="rainbow" selected>rainbow</option>
+          <option value="none">none</option>
+        </select>
+      </div>
+      <div class="p-2 flex items-center gap-2">
+        <label htmlFor="glow-level" class="text-gray-500 text-sm"
+          >Glow Level?</label
+        >
+        <select
+          id="glow-level"
+          name="glow-level"
+          class="border-2 border-gray-300 p-1 rounded-lg w-full flex-1"
+        >
+          <option value="high" selected>high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+          <option value="none">none</option>
+        </select>
+      </div>
       <button
         class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
-        id="reset"
+        id="apply-preset"
       >
-        Reset camera
+        Apply-preset
       </button>
     </div>
     <!--
@@ -80,12 +150,84 @@ const HTMLContent = html`
 const app = DOM.createDomElement(HTMLContent) as HTMLDivElement;
 document.body.appendChild(app);
 
+Toaster.registerSelf();
+const toaster = DOM.createDomElement(html`<toaster-element
+  data-position="top-right"
+></toaster-element>`) as Toaster;
+document.body.appendChild(toaster);
+
 const startRecording = app.querySelector("#start") as HTMLButtonElement;
 const stopRecording = app.querySelector("#stop") as HTMLButtonElement;
 const resetCameraBtn = app.querySelector("#reset") as HTMLButtonElement;
 const recordMicCheckbox = app.querySelector("#mic") as HTMLInputElement;
 const recordCameraCheckbox = app.querySelector("#camera") as HTMLInputElement;
 const circleFrameCheckbox = app.querySelector("#circle") as HTMLInputElement;
+const injectCameraButton = app.querySelector("#inject") as HTMLButtonElement;
+const removeCameraButton = app.querySelector("#remove") as HTMLButtonElement;
+const developerSettingsCheckbox = app.querySelector(
+  "#developer-settings"
+) as HTMLInputElement;
+const developerSettings = app.querySelector("#actions") as HTMLInputElement;
+const colorPicker = app.querySelector("#border-color") as HTMLInputElement;
+const presetSelect = app.querySelector("#border-preset") as HTMLSelectElement;
+const glowLevelSelect = app.querySelector("#glow-level") as HTMLSelectElement;
+const applyPresetButton = app.querySelector(
+  "#apply-preset"
+) as HTMLButtonElement;
+
+developerSettings.style.visibility = "hidden";
+
+const currentTab = Tabs.getCurrentTab();
+
+// region developer settings
+
+colorPicker.addEventListener("change", async () => {
+  const color = colorPicker.value;
+  const tab = await currentTab;
+  if (!tab) return;
+  cameraStyleChannel.sendP2CWithPing(tab.id!, { borderColor: color });
+});
+
+applyPresetButton.addEventListener("click", async () => {
+  const presets = ["rainbow", "none"] as const;
+  const borderPreset = presetSelect.value as (typeof presets)[number];
+  const glowLevel = glowLevelSelect.value as "high" | "medium" | "low" | "none";
+  if (!presets.includes(borderPreset)) return;
+
+  const tab = await currentTab;
+  if (!tab) return;
+  cameraStyleChannel.sendP2CWithPing(tab.id!, {
+    borderPreset: borderPreset as (typeof presets)[number],
+    glowLevel,
+  });
+});
+
+developerSettingsCheckbox.addEventListener("change", () => {
+  if (developerSettingsCheckbox.checked) {
+    developerSettings.style.visibility = "visible";
+  } else {
+    developerSettings.style.visibility = "hidden";
+  }
+});
+
+injectCameraButton.addEventListener("click", async () => {
+  const currentTab = await Tabs.getCurrentTab();
+  if (!currentTab?.url?.startsWith("http")) return;
+
+  if (await CameraRecorder.isCameraInUse()) {
+    toaster.danger("camera is in use");
+    return;
+  }
+
+  await injectCamera(currentTab.id!);
+});
+
+removeCameraButton.addEventListener("click", async () => {
+  const currentTab = await Tabs.getCurrentTab();
+  if (!currentTab?.url?.startsWith("http")) return;
+
+  await removeCamera(currentTab.id!);
+});
 
 /**
  * * The reason why we must use an offscreen document
@@ -94,6 +236,8 @@ const circleFrameCheckbox = app.querySelector("#circle") as HTMLInputElement;
  *
  * The only way to keep the recording going across navigations is to use an offscreen document.
  */
+
+// region Recording
 
 stopRecording.disabled = true;
 resetCameraBtn.disabled = true;

@@ -169,7 +169,9 @@ export class MessagesModel {
             if (attempts < maxRetries) {
               setTimeout(sendPing, interval); // Retry after a delay
             } else {
-              reject("Content script not responding.");
+              reject(
+                "Content script not responding. Make sure you are invoking MessagesModel.receivePingFromBackground() in the content script."
+              );
             }
           } else if (response && response.status === "PONG") {
             resolve("Content script is ready.");

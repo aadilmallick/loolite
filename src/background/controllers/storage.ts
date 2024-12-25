@@ -5,6 +5,7 @@ export const appStorage = new LocalStorage({
   isRecordingCamera: false,
   webcamCoordinates: null as { x: number; y: number } | null,
   circle: true,
+  size: 200,
 });
 export const appSettingsStorage = new SyncStorage({});
 

@@ -1,4 +1,9 @@
 import {
+  BorderGradientFactory,
+  BorderGradientModel,
+  GlowLevel,
+} from "../BorderGradient";
+import {
   css,
   CSSVariablesManager,
   CSSVariablesManagerWithDefaultData,
@@ -38,7 +43,6 @@ export class ContentScriptUI extends WebComponent {
         border: 4px solid rebeccapurple;
         z-index: 5000;
         cursor: grab;
-        resize: both;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
       }
 
@@ -133,9 +137,11 @@ export class ContentScriptUI extends WebComponent {
   static getStyles({
     borderRadius,
     size,
+    borderColor,
   }: {
     borderRadius: number;
     size: number;
+    borderColor?: string;
   }) {
     return css`
       #camera-iframe-container {
@@ -146,7 +152,7 @@ export class ContentScriptUI extends WebComponent {
         bottom: 0;
         right: 0;
         border-radius: ${borderRadius}px;
-        border: 4px solid rebeccapurple;
+        border: 4px solid ${borderColor || "rebeccapurple"};
         z-index: 5000;
         cursor: grab;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
@@ -286,6 +292,35 @@ export class ContentScriptUI extends WebComponent {
     document.body.appendChild(videoFrame);
 
     return videoFrame;
+  }
+
+  static applyGradient(
+    videoFrame: HTMLElement,
+    options?: {
+      borderColor?: string;
+      animatedBorderOptions?: {
+        borderPreset: "rainbow";
+        glowLevel?: GlowLevel;
+      };
+    }
+  ) {
+    const container = videoFrame.querySelector(
+      "#camera-iframe-container"
+    )! as HTMLElement;
+    if (options?.borderColor) {
+      container.style.borderColor = options.borderColor;
+    }
+    if (options?.animatedBorderOptions) {
+      BorderGradientModel.removeStyles(container.id);
+      const borderGradient = BorderGradientFactory.createPresetGradient(
+        container,
+        options.animatedBorderOptions.borderPreset,
+        {
+          glowLevel: options.animatedBorderOptions.glowLevel,
+        }
+      );
+      console.log("borderGradient", borderGradient);
+    }
   }
 
   static manualDestruction() {

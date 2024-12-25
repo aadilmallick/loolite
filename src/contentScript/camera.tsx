@@ -1,7 +1,10 @@
+import { cameraStyleChannel } from "../background/controllers/messages";
 import { appStorage } from "../background/controllers/storage";
+import { MessagesModel } from "../chrome-api/messages";
 import { WebAccessibleResources } from "../chrome-api/webAccessibleResources";
 import { NavigatorPermissions } from "../offscreen/NavigatorPermissions";
 import { ToastManager } from "../options/Toast";
+import { BorderGradientModel } from "../utils/BorderGradient";
 import {
   html,
   DOM,
@@ -79,6 +82,31 @@ async function initCoordinates(iframeContainer: HTMLElement) {
   return coordinates;
 }
 
+function listenToMessages(videoFrame: HTMLElement) {
+  cameraStyleChannel.listen(({ borderColor, borderPreset, glowLevel }) => {
+    console.log("message from cameraStyleChannel", borderColor, borderPreset);
+    if (borderPreset) {
+      if (borderPreset === "none") {
+        const iframeContainer = videoFrame.querySelector(
+          "#camera-iframe-container"
+        ) as HTMLElement;
+        BorderGradientModel.removeStyles(iframeContainer.id);
+      } else {
+        ContentScriptUI.applyGradient(videoFrame, {
+          animatedBorderOptions: {
+            borderPreset: borderPreset,
+            glowLevel: glowLevel || "high",
+          },
+        });
+      }
+    } else if (borderColor) {
+      ContentScriptUI.applyGradient(videoFrame, {
+        borderColor: borderColor,
+      });
+    }
+  });
+}
+
 async function create() {
   const iframeSrc = WebAccessibleResources.getFileURIForContent("video.html");
   if (!iframeSrc) {
@@ -93,11 +121,16 @@ async function create() {
   const iframeContainer = videoFrame.querySelector(
     "#camera-iframe-container"
   ) as HTMLElement;
+
+  listenToMessages(videoFrame);
+
+  const storedCameraSize = await appStorage.get("size");
+  console.log("storedCameraSize", storedCameraSize);
   const variablesManager = new CSSVariablesManagerWithDefaultData(
     iframeContainer,
     {
-      cameraSize: "200px",
-      size: 200,
+      cameraSize: `${storedCameraSize}px`,
+      size: storedCameraSize,
     }
   );
   const coordinates = {
@@ -120,7 +153,7 @@ async function create() {
     coordinates.mouseDown = true;
   });
 
-  iframeContainer.addEventListener("dblclick", (e) => {
+  iframeContainer.addEventListener("dblclick", async (e) => {
     console.log("dblclick");
     const size = Number(variablesManager.get("size"));
     let newSize = size + CONSTANTS.GROWTH_FACTOR;
@@ -129,6 +162,7 @@ async function create() {
     }
     variablesManager.set("cameraSize", `${newSize}px`);
     variablesManager.set("size", newSize);
+    await appStorage.set("size", newSize);
   });
 
   iframeContainer.addEventListener("mouseup", async (e) => {
@@ -145,12 +179,42 @@ async function create() {
       if (coordinates.mouseDown) {
         coordinates.x = e.clientX;
         coordinates.y = e.clientY;
-        const newX =
+        let newX =
           coordinates.x -
           Math.floor(iframeContainer.getBoundingClientRect().width / 2);
-        const newY =
+        let newY =
           coordinates.y -
           Math.floor(iframeContainer.getBoundingClientRect().height / 2);
+        if (newX < 0) {
+          newX = 0;
+        }
+        if (newY < 0) {
+          newY = 0;
+        }
+        const cameraWidth = Number(variablesManager.get("size"));
+        let cameraHeight = cameraWidth;
+        if (!circleFrame) {
+          // 16/9 aspect ratio
+          cameraHeight = cameraWidth * 0.5625;
+        }
+        if (newX > window.innerWidth - cameraWidth) {
+          newX = window.innerWidth - cameraWidth;
+        }
+        if (newY > window.innerHeight - cameraHeight) {
+          newY = window.innerHeight - cameraHeight;
+        }
+
+        // lerp({
+        //   currentPos: {
+        //     x: iframeContainer.getBoundingClientRect().x,
+        //     y: iframeContainer.getBoundingClientRect().y,
+        //   },
+        //   targetPos: { x: newX, y: newY },
+        //   callback: ({ x, y }) => {
+        //     iframeContainer.style.left = `${x}px`;
+        //     iframeContainer.style.top = `${y}px`;
+        //   },
+        // });
         iframeContainer.style.left = `${newX}px`;
         iframeContainer.style.top = `${newY}px`;
         coordinates.x = newX;
@@ -158,80 +222,10 @@ async function create() {
       }
     }, 50)
   );
-
-  // const draggable = new Draggable(videoFrame, {
-  //   draggable: "#camera-iframe-container",
-  //   mirror: {
-  //     // constrainDimensions: true,
-  //     appendTo: "#placeholder",
-  //   },
-  // });
-
-  // draggable.on("drag:start", (e) => {
-  //   console.count("on drag start");
-  // });
-
-  // const onDragMove = throttle((e: DragMoveEvent) => {
-  //   console.count("on drag move");
-
-  //   const { source } = e;
-  //   const boundingBox = source.getBoundingClientRect();
-  //   const prevCoordinates = { ...coordinates };
-  //   //   if (e.sensorEvent.clientX < 0) {
-  //   //     coordinates.x = 0;
-  //   //   }
-  //   //   if (e.sensorEvent.clientY < 0) {
-  //   //     coordinates.y = 0;
-  //   //   }
-  //   //   if (e.sensorEvent.clientX - boundingBox.width > window.innerWidth) {
-  //   //     coordinates.x = window.innerWidth - boundingBox.width;
-  //   //   }
-  //   //   if (e.sensorEvent.clientY - boundingBox.height > window.innerHeight) {
-  //   //     coordinates.y = window.innerHeight - boundingBox.height;
-  //   //   } else {
-  //   //     coordinates.x = e.sensorEvent.clientX;
-  //   //     coordinates.y = e.sensorEvent.clientY;
-  //   //   }
-  //   //   console.log(coordinates);
-  //   coordinates.x = e.sensorEvent.clientX;
-  //   coordinates.y = e.sensorEvent.clientY;
-  //   // lerp({
-  //   //   currentPos: {
-  //   //     x: prevCoordinates.x,
-  //   //     y: prevCoordinates.y,
-  //   //   },
-  //   //   targetPos: {
-  //   //     x: coordinates.x,
-  //   //     y: coordinates.y,
-  //   //   },
-  //   //   callback: (currentPos) => {
-  //   //     source.style.left = `${currentPos.x}px`;
-  //   //     source.style.top = `${currentPos.y}px`;
-  //   //   },
-  //   //   lerpFactor: 0.8,
-  //   // });
-  //   source.style.left = `${coordinates.x}px`;
-  //   source.style.top = `${coordinates.y}px`;
-  // }, 15);
-
-  // draggable.on("drag:stop", (e) => {
-  //   //   e.sensorEvent.clientX
-  //   const { originalSource } = e;
-  //   originalSource.style.left = `${coordinates.x}px`;
-  //   originalSource.style.top = `${coordinates.y}px`;
-  // });
-
-  // draggable.on("drag:move", onDragMove);
-
-  document.body.style.overflowX = "hidden";
 }
 
-console.log(
-  "%c has element",
-  "color:blue;",
-  document.querySelector("#camera-iframe-container")
-);
 if (!document.querySelector("#camera-iframe-container")) {
+  MessagesModel.receivePingFromBackground();
   create();
 }
 // else {

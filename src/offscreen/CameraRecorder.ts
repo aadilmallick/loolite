@@ -140,6 +140,29 @@ export class CameraRecorder {
     return Boolean(this.recorder && this.recorder.state === "recording");
   }
 
+  static async isCameraInUse() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
+
+      if (videoDevices.length === 0) {
+        return false; // No camera detected
+      }
+
+      return true;
+    } catch (error: any) {
+      if (
+        error.name === "NotReadableError" ||
+        error.name === "TrackStartError"
+      ) {
+        return true; // Camera is likely in use
+      }
+      return false; // Other error, camera might not be available
+    }
+  }
+
   /**
    * For programmatically stopping the recording.
    */

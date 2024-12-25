@@ -46,11 +46,11 @@ startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
     recordMic: recordAudio,
   });
 
-  const recordingType = ScreenRecorder.getScreenRecordingType(
-    screenRecorder.stream!
-  );
+  // const recordingType = ScreenRecorder.getScreenRecordingType(
+  //   screenRecorder.stream!
+  // );
   if (recordingSuccess) {
-    recordCameraChannel.sendP2P({ recordingType });
+    // recordCameraChannel.sendP2P(undefined);
     currentlyRecording.sendP2P({
       withCamera: recordCamera,
     });

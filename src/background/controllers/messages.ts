@@ -20,15 +20,22 @@ export const currentlyRecording = new MessagesOneWay<
   },
   undefined
 >("currentlyRecording");
-export const recordCameraChannel = new MessagesOneWay<
-  {
-    recordingType: "monitor" | "window" | "browser";
-  },
-  undefined
->("recordCamera");
+export const recordCameraChannel = new MessagesOneWay<undefined, undefined>(
+  "recordCamera"
+);
 export const stopRecordCameraChannel = new MessagesOneWay<undefined, undefined>(
   "stopRecordCamera"
 );
+
+export const cameraStyleChannel = new MessagesOneWay<
+  {
+    borderColor?: string;
+    borderPreset?: "rainbow" | "none";
+    glowLevel?: "high" | "medium" | "low" | "none";
+  },
+  undefined
+>("cameraStyleChannel");
+
 export const canceledRecording = new MessagesOneWay("canceledRecording");
 export const notCurrentlyRecording = new MessagesOneWay(
   "notCurrentlyRecording"

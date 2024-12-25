@@ -6,6 +6,7 @@ import {
   notCurrentlyRecording,
 } from "./controllers/messages";
 import {
+  BasicColorLogger,
   getAllScriptableTabs,
   injectCamera,
   removeCamera,
@@ -46,9 +47,10 @@ notCurrentlyRecording.listen(() => {
 });
 
 Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
+  BasicColorLogger.info("scriptable tabs");
+  console.log(await getAllScriptableTabs());
   const tabId = tabIds[0];
   const tab = await Tabs.getTabById(tabId);
-  console.log("highlighted tab", tab);
   if (!tab.url?.startsWith("http")) return;
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");
@@ -60,7 +62,7 @@ Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
 
 Tabs.Events.onTabNavigateComplete(async (tabId, tab) => {
   if (!tab.url?.startsWith("http")) return;
-  console.log("tab navigate complete", tab);
+  console.log("tab navigate complete");
 
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");

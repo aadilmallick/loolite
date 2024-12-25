@@ -54,7 +54,8 @@ export default class Tabs {
     allWindows?: boolean;
   }) {
     if (options?.allWindows) {
-      const windows = await chrome.windows.getAll();
+      const windows = await chrome.windows.getAll({ populate: true });
+      console.log(windows);
       const tabs: chrome.tabs.Tab[] = [];
       for (const window of windows) {
         const windowTabs = await chrome.tabs.query({ windowId: window.id });
