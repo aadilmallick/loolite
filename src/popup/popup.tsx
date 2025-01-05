@@ -369,6 +369,9 @@ startRecording.addEventListener("click", async () => {
     await appStorage.set("isRecordingCamera", true);
     await appStorage.set("webcamCoordinates", null);
   }
+  if (!shouldRecordCamera) {
+    await appStorage.set("isRecordingCamera", false);
+  }
   await Offscreen.setupOffscreenDocument({
     justification: "to record screen content and record audio",
     reasons: Offscreen.getReasons(["DISPLAY_MEDIA", "USER_MEDIA"]),
@@ -421,7 +424,12 @@ currentlyRecording.listen(({ withCamera }) => {
     }, 750);
   }
 
-  dookieShit();
+  if (withCamera) {
+    appStorage.set("isRecordingCamera", true);
+    dookieShit();
+  } else {
+    appStorage.set("isRecordingCamera", false);
+  }
 });
 
 notCurrentlyRecording.listen(() => {
