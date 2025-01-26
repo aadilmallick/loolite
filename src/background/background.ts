@@ -48,10 +48,11 @@ notCurrentlyRecording.listen(() => {
 
 Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
   BasicColorLogger.info("scriptable tabs");
-  console.log(await getAllScriptableTabs());
+  const scriptableTabs = await getAllScriptableTabs();
   const tabId = tabIds[0];
   const tab = await Tabs.getTabById(tabId);
   if (!tab.url?.startsWith("http")) return;
+  if (!scriptableTabs.includes(tabId)) return;
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");
   console.log("%c current storage", "color: red; font-size: 20px");
@@ -63,6 +64,9 @@ Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
 Tabs.Events.onTabNavigateComplete(async (tabId, tab) => {
   if (!tab.url?.startsWith("http")) return;
   console.log("tab navigate complete");
+
+  const scriptableTabs = await getAllScriptableTabs();
+  if (!scriptableTabs.includes(tabId)) return;
 
   const isRecording = await appStorage.get("isRecording");
   const isCameraRecording = await appStorage.get("isRecordingCamera");
