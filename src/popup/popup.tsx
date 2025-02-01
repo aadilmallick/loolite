@@ -417,11 +417,16 @@ currentlyRecording.listen(({ withCamera }) => {
   logToBackground("popup", { withCamera });
   async function dookieShit() {
     await onIsRecording();
-    await injectCameraIntoCurrentTab();
+    // await injectCameraIntoCurrentTab(); TODO: remove this
+    await Tabs.createTab({
+      active: true,
+      pinned: true,
+      url: WebAccessibleResources.getFileURIForProcess("enableCamera.html"),
+    });
 
-    setTimeout(() => {
-      window.close();
-    }, 750);
+    // setTimeout(() => {
+    //   window.close();
+    // }, 750);
   }
 
   if (withCamera) {

@@ -51,6 +51,22 @@ export async function removeCamera(tabId: number) {
   });
 }
 
+export async function startPIPCamera() {
+  // document.pictureInPictureElement
+
+  // 1. get camera stream
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      facingMode: "user",
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      frameRate: { ideal: 30 },
+      aspectRatio: 1.7777777778,
+    },
+  });
+}
+
 export async function injectCamera(tabId: number) {
   Scripting.executeScripts(
     tabId,

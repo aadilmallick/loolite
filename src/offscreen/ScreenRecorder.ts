@@ -195,7 +195,6 @@ export class ScreenRecorder {
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm;codecs=vp9,opus",
     });
-
     // Start recording.
     this.recorder.start();
     this.recorder.addEventListener("dataavailable", (event) => {

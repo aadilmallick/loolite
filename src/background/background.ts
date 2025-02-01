@@ -32,45 +32,46 @@ async function onStopRecording() {
     appStorage.set("isRecordingCamera", false),
     chrome.action.setBadgeText({ text: "" }),
   ]);
-
+  const pinnedTab = await chrome.tabs.query({ pinned: true });
+  console.log("pinnedTab", pinnedTab);
+  pinnedTab[0] && (await chrome.tabs.remove(pinnedTab[0].id!));
   // remove camera from all injected tabs
-  const scriptableTabs = await getAllScriptableTabs();
-  console.log("scriptableTabs", scriptableTabs);
-  await Promise.all(
-    scriptableTabs.map((tabId) => {
-      return removeCamera(tabId!);
-    })
-  );
+
+  // const scriptableTabs = await getAllScriptableTabs();
+  // console.log("scriptableTabs", scriptableTabs);
+  // await Promise.all(
+  //   scriptableTabs.map((tabId) => {
+  //     return removeCamera(tabId!);
+  //   })
+  // );
 }
-notCurrentlyRecording.listen(() => {
-  onStopRecording();
+notCurrentlyRecording.listenAsync(async () => {
+  await onStopRecording();
 });
 
 Tabs.Events.onTabHighlighted(async ({ tabIds }) => {
-  BasicColorLogger.info("scriptable tabs");
-  const scriptableTabs = await getAllScriptableTabs();
-  const tabId = tabIds[0];
-  const tab = await Tabs.getTabById(tabId);
-  if (!tab.url?.startsWith("http")) return;
-  if (!scriptableTabs.includes(tabId)) return;
-  const isRecording = await appStorage.get("isRecording");
-  const isCameraRecording = await appStorage.get("isRecordingCamera");
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
-
-  isRecording && isCameraRecording && (await injectCamera(tabId));
+  // const scriptableTabs = await getAllScriptableTabs();
+  // const tabId = tabIds[0];
+  // const tab = await Tabs.getTabById(tabId);
+  // if (!tab.url?.startsWith("http")) return;
+  // if (!scriptableTabs.includes(tabId)) return;
+  // const isRecording = await appStorage.get("isRecording");
+  // const isCameraRecording = await appStorage.get("isRecordingCamera");
+  // console.log("%c current storage", "color: red; font-size: 20px");
+  // console.log(await appStorage.getAll());
+  // isRecording && isCameraRecording && (await injectCamera(tabId));
 });
 
 Tabs.Events.onTabNavigateComplete(async (tabId, tab) => {
   if (!tab.url?.startsWith("http")) return;
   console.log("tab navigate complete");
 
-  const scriptableTabs = await getAllScriptableTabs();
-  if (!scriptableTabs.includes(tabId)) return;
+  // const scriptableTabs = await getAllScriptableTabs();
+  // if (!scriptableTabs.includes(tabId)) return;
 
-  const isRecording = await appStorage.get("isRecording");
-  const isCameraRecording = await appStorage.get("isRecordingCamera");
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
-  isRecording && isCameraRecording && (await injectCamera(tabId));
+  // const isRecording = await appStorage.get("isRecording");
+  // const isCameraRecording = await appStorage.get("isRecordingCamera");
+  // console.log("%c current storage", "color: red; font-size: 20px");
+  // console.log(await appStorage.getAll());
+  // isRecording && isCameraRecording && (await injectCamera(tabId));
 });

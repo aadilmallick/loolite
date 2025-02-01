@@ -11,6 +11,7 @@ module.exports = {
     background: path.resolve("src/background/background.ts"),
     contentScript: path.resolve("src/contentScript/contentScript.tsx"),
     camera: path.resolve("src/contentScript/camera.tsx"),
+    enableCamera: path.resolve("src/pages/enableCamera.tsx"),
     video: path.resolve("src/contentScript/video.tsx"),
   },
   module: {
@@ -45,7 +46,13 @@ module.exports = {
         },
       ],
     }),
-    ...getHtmlPlugins(["popup", "options", "offscreen", "video"]),
+    ...getHtmlPlugins([
+      "popup",
+      "options",
+      "offscreen",
+      "video",
+      "enableCamera",
+    ]),
   ],
   output: {
     filename: "[name].js",
@@ -57,7 +64,8 @@ module.exports = {
         return (
           chunk.name !== "contentScript" &&
           chunk.name !== "background" &&
-          chunk.name !== "camera"
+          chunk.name !== "camera" &&
+          chunk.name !== "enableCamera"
         );
       },
     },
