@@ -1,4 +1,4 @@
-import { css, DOM, html } from "../utils/Dom";
+import { createReactiveProxy, css, DOM, html } from "../utils/Dom";
 import { AbortControllerManager, PIPElement } from "../utils/PIP";
 import "../index.css";
 
@@ -13,58 +13,109 @@ const loadingOverlay = DOM.createDomElement(html`
 `);
 
 const pipContainer = DOM.createDomElement(html`
-  <div class="pip-container"></div>
+  <div class="pip-container" id="pip-container"></div>
 `);
 pipContainer.appendChild(cameraVideo);
 // TODO: Add loading overlay to pipContainer
 
-const pipStyles = css`
-  * {
-    margin: 0;
-    padding: 0;
-  }
+function getStyles(options?: {
+  circleFrame?: boolean;
+  gradientActive?: boolean;
+}) {
+  return css`
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  .pip-container {
-    min-width: 200px;
-    width: 500px;
-    /* aspect-ratio: 16 / 9; */
-  }
-
-  video {
-    transform: scaleX(-1);
-    max-width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  @media (display-mode: picture-in-picture) {
     .pip-container {
-      width: 100%;
-      height: 100%;
-    }
-
-    body {
       min-width: 200px;
+      width: 500px;
+      position: relative;
       /* aspect-ratio: 16 / 9; */
-      width: 100%;
+      ${options?.circleFrame ? "border-radius: 9999px;" : ""}
+    }
+
+    video {
+      transform: scaleX(-1);
+      max-width: 100%;
       height: 100%;
+      object-fit: cover;
+      ${options?.circleFrame ? "border-radius: 9999px;" : ""}
+      ${options?.gradientActive ? "border-radius: 4px;" : ""}
     }
 
-    html {
-      overflow: hidden;
-      background-color: black;
-      display: grid;
-      place-items: center;
+    @media (display-mode: picture-in-picture) {
+      .pip-container {
+        width: 100%;
+        height: 100%;
+        ${options?.gradientActive ? "padding: 8px;" : ""}
+      }
+
+      body {
+        min-width: 200px;
+        /* aspect-ratio: 16 / 9; */
+        width: 100%;
+        height: 100%;
+      }
+
+      html {
+        background-color: black;
+        display: grid;
+        overflow-y: hidden;
+        place-items: center;
+      }
     }
+  `;
+}
+
+const pipStyles = getStyles();
+class CameraSettingsManager {
+  static stylesID = "camera-settings";
+  public stylesProxy = createReactiveProxy("css", pipStyles, (newCss) => {
+    const styleTag = document.getElementById(CameraSettingsManager.stylesID);
+    if (styleTag) {
+      styleTag.textContent = newCss;
+    }
+  });
+  public cameraPlayer = new PIPElement(pipContainer, {
+    width: 200,
+    height: 200 * (9 / 16),
+  });
+
+  setCircleFrame(circleFrame: boolean) {
+    if (circleFrame) {
+      this.cameraPlayer = new PIPElement(pipContainer, {
+        width: 200,
+        height: 200,
+      });
+    } else {
+      this.cameraPlayer = new PIPElement(pipContainer, {
+        width: 200,
+        height: 200 * (9 / 16),
+      });
+    }
+
+    this.stylesProxy.css = getStyles({ circleFrame });
   }
-`;
 
-DOM.addStyleTag(pipStyles);
+  setBorderGradientActive(gradientActive: boolean) {
+    this.stylesProxy.css = getStyles({ gradientActive });
+  }
 
-const cameraPlayer = new PIPElement(pipContainer, {
-  width: 200,
-  height: 200 * (9 / 16),
-});
+  constructor() {
+    const styleTag = document.createElement("style");
+    styleTag.textContent = `${this.stylesProxy.css}`;
+    styleTag.id = CameraSettingsManager.stylesID;
+    document.head.appendChild(styleTag);
+  }
+}
+
+const cameraSettingsManager = new CameraSettingsManager();
+
+// DOM.addStyleTag(pipStyles, CameraSettingsManager.stylesID);
+
 const abortContollerManager = new AbortControllerManager();
 
 let stream: MediaStream | null = null;
@@ -92,8 +143,8 @@ async function togglePictureInPicture() {
     console.log("stream", stream);
     cameraVideo.srcObject = stream;
     await cameraVideo.play();
-    await cameraPlayer.openPipWindow();
-    cameraPlayer.copyStylesToPipWindow();
+    await cameraSettingsManager.cameraPlayer.openPipWindow();
+    cameraSettingsManager.cameraPlayer.copyStylesToPipWindow();
     PIPElement.pipWindow?.addEventListener(
       "pagehide",
       () => {
@@ -131,15 +182,22 @@ htmlContent.appendChild(pipContainer);
 
 DOM.$("#start")?.addEventListener("click", togglePictureInPicture);
 
-cameraPlayer.Events.onPIPEnter((pipWindow) => {
+cameraSettingsManager.cameraPlayer.Events.onPIPEnter((pipWindow) => {
   console.log("pip window enter", pipWindow);
   pipContainer.remove();
 });
 
 import React from "react";
 import { injectRoot } from "../utils/ReactUtils";
+import {
+  BorderGradientFactory,
+  BorderGradientModel,
+} from "../utils/BorderGradient";
 
 const CameraSettings = () => {
+  const [glowLevel, setGlowLevel] = React.useState<
+    "high" | "medium" | "low" | "none"
+  >("high");
   return (
     <>
       <div className="p-2">
@@ -162,6 +220,21 @@ const CameraSettings = () => {
         <select
           onChange={(e) => {
             const borderPreset = e.target.value as "rainbow" | "none";
+            if (borderPreset === "none") {
+              BorderGradientModel.removeStyles(pipContainer.id);
+              cameraSettingsManager.setBorderGradientActive(false);
+            }
+            if (borderPreset === "rainbow") {
+              BorderGradientModel.removeStyles(pipContainer.id);
+              BorderGradientFactory.createPresetGradient(
+                pipContainer,
+                borderPreset,
+                {
+                  glowLevel: glowLevel,
+                }
+              );
+              cameraSettingsManager.setBorderGradientActive(true);
+            }
           }}
           id="border-preset"
           name="border-preset"
@@ -179,9 +252,9 @@ const CameraSettings = () => {
         <select
           id="glow-level"
           name="glow-level"
-          defaultValue={"high"}
+          value={glowLevel}
           onChange={(e) => {
-            const glowLevel = e.target.value as
+            const newGlowLevel = e.target.value as
               | "high"
               | "medium"
               | "low"

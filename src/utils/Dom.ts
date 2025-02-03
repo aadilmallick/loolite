@@ -3,8 +3,9 @@ export class DOM {
     const dom = new DOMParser().parseFromString(html, "text/html");
     return dom.body.firstElementChild as HTMLElement;
   }
-  static addStyleTag(css: string) {
+  static addStyleTag(css: string, id?: string) {
     const styles = document.createElement("style");
+    id && styles.id;
     styles.textContent = css;
     document.head.appendChild(styles);
     return styles;
@@ -89,6 +90,51 @@ export class CSSVariablesManager<T = Record<string, string>> {
 
   get(name: keyof T) {
     return this.element.style.getPropertyValue(this.formatName(name as string));
+  }
+}
+
+export class DOMLifecycleManager {
+  static documentIsReady() {
+    return new Promise<boolean>((resolve) => {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => resolve(true));
+      } else {
+        resolve(true);
+      }
+    });
+  }
+
+  static onWindowClosed(callback: () => void) {
+    window.addEventListener("unload", callback);
+  }
+
+  static beforeWindowClosed(callback: () => void) {
+    window.addEventListener("beforeunload", callback);
+  }
+
+  static get pageIsFocused() {
+    return document.hasFocus();
+  }
+
+  static get pageIsVisible() {
+    return !document.hidden;
+  }
+
+  static onVisibilityChange(callback: (isVisible: boolean) => void) {
+    document.addEventListener("visibilitychange", () => {
+      callback(this.pageIsVisible);
+    });
+  }
+
+  static onMemoryAboutToUnload(callback: () => void) {
+    window.addEventListener("freeze", callback);
+  }
+
+  static preventWindowClose(message: string) {
+    window.addEventListener("beforeunload", (e) => {
+      e.preventDefault();
+      return message;
+    });
   }
 }
 
@@ -183,4 +229,18 @@ export class DateModel {
     const formattedTime = `${hour}:${minutes.padStart(2, "0")} ${ampm}`;
     return formattedTime;
   }
+}
+
+export function createReactiveProxy<T extends string, V>(
+  key: T,
+  value: V,
+  onSet: (newValue: V) => void
+) {
+  const proxy = new Proxy({ [key]: value } as Record<T, V>, {
+    set(target, p, newValue, receiver) {
+      onSet(newValue);
+      return Reflect.set(target, p, newValue, receiver);
+    },
+  });
+  return proxy;
 }

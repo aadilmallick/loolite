@@ -32,9 +32,12 @@ async function onStopRecording() {
     appStorage.set("isRecordingCamera", false),
     chrome.action.setBadgeText({ text: "" }),
   ]);
-  const pinnedTab = await chrome.tabs.query({ pinned: true });
-  console.log("pinnedTab", pinnedTab);
-  pinnedTab[0] && (await chrome.tabs.remove(pinnedTab[0].id!));
+  const pinnedTab = (
+    await chrome.tabs.query({
+      pinned: true,
+    })
+  ).filter((tab) => tab.url?.includes(chrome.runtime.id))[0];
+  pinnedTab && (await chrome.tabs.remove(pinnedTab.id!));
   // remove camera from all injected tabs
 
   // const scriptableTabs = await getAllScriptableTabs();

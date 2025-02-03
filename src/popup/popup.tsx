@@ -214,10 +214,10 @@ injectCameraButton.addEventListener("click", async () => {
   const currentTab = await Tabs.getCurrentTab();
   if (!currentTab?.url?.startsWith("http")) return;
 
-  if (await CameraRecorder.isCameraInUse()) {
-    toaster.danger("camera is in use");
-    return;
-  }
+  // if (await CameraRecorder.isCameraInUse()) {
+  //   toaster.danger("camera is in use");
+  //   return;
+  // }
 
   await injectCamera(currentTab.id!);
 });

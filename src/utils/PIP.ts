@@ -62,9 +62,11 @@ export class PIPVideo {
     },
     removeEnterPIPListeners: () => {
       this.enterPIPAborter.abort();
+      this.enterPIPAborter.reset();
     },
     removeExitPIPListeners: () => {
       this.exitPIPAborter.abort();
+      this.exitPIPAborter.reset();
     },
   };
 }
@@ -129,6 +131,10 @@ export class PIPElement {
     if (!this.pipWindow) {
       return;
     }
+    // delete all style tags first
+    this.pipWindow.document.querySelectorAll("style").forEach((style) => {
+      style.remove();
+    });
     [...document.styleSheets].forEach((styleSheet) => {
       const pipWindow = this.pipWindow!;
       try {

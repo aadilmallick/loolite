@@ -12,6 +12,7 @@ module.exports = {
     contentScript: path.resolve("src/contentScript/contentScript.tsx"),
     camera: path.resolve("src/contentScript/camera.tsx"),
     enableCamera: path.resolve("src/pages/enableCamera.tsx"),
+    enableCameraVideo: path.resolve("src/pages/enableCameraVideo.tsx"),
     video: path.resolve("src/contentScript/video.tsx"),
   },
   module: {
@@ -52,6 +53,7 @@ module.exports = {
       "offscreen",
       "video",
       "enableCamera",
+      "enableCameraVideo",
     ]),
   ],
   output: {
@@ -65,7 +67,8 @@ module.exports = {
           chunk.name !== "contentScript" &&
           chunk.name !== "background" &&
           chunk.name !== "camera" &&
-          chunk.name !== "enableCamera"
+          chunk.name !== "enableCamera" &&
+          chunk.name !== "enableCameraVideo"
         );
       },
     },
