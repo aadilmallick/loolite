@@ -25,9 +25,9 @@ class MicNotEnabledError extends RecordingError {
 
 export class ScreenRecorder {
   stream?: MediaStream;
-  private recorder?: MediaRecorder;
-  private recorderStream?: MediaStream;
-  private chunks: Blob[] = [];
+  protected recorder?: MediaRecorder;
+  protected recorderStream?: MediaStream;
+  protected chunks: Blob[] = [];
   micStream?: MediaStream;
 
   static async checkMicPermission() {
@@ -37,7 +37,7 @@ export class ScreenRecorder {
     return result.state;
   }
 
-  private async getStream({ recordMic }: { recordMic: boolean }) {
+  protected async getStream({ recordMic }: { recordMic: boolean }) {
     const recorderStream = await navigator.mediaDevices.getDisplayMedia({
       audio: recordMic,
       video: true,
@@ -224,5 +224,126 @@ export class ScreenRecorder {
     this.recorder.stop();
     this.recorder = undefined;
     this.chunks = [];
+  }
+}
+
+export class LoomScreenRecorder extends ScreenRecorder {
+  protected async getStream({
+    recordMic,
+    recordCamera,
+  }: {
+    recordMic: boolean;
+    recordCamera: boolean;
+  }) {
+    const recorderStream = await navigator.mediaDevices.getDisplayMedia({
+      audio: recordMic,
+      // need to record entire screen if also recording camera with loom
+      video: recordCamera
+        ? {
+            displaySurface: "monitor",
+          }
+        : true,
+    });
+    this.recorderStream = recorderStream;
+
+    // if video ends, audio should too.
+    this.recorderStream.getTracks()[0].addEventListener("ended", async () => {
+      await this.stopRecording();
+    });
+
+    // if recording window (no system audio), then just join with mic.
+    if (recorderStream.getAudioTracks().length === 0 && recordMic) {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      const combinedStream = new MediaStream([
+        ...recorderStream.getVideoTracks(),
+        ...audioStream.getAudioTracks(),
+      ]);
+      return combinedStream;
+    } else if (recordMic) {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      if (audioStream.getAudioTracks().length === 0) {
+        throw new MicNotEnabledError(audioStream);
+      }
+
+      const audioContext = new AudioContext();
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Add tab audio to the destination
+      const tabAudioSource =
+        audioContext.createMediaStreamSource(recorderStream);
+      tabAudioSource.connect(destination);
+
+      // Add mic audio to the destination
+      const micAudioSource = audioContext.createMediaStreamSource(audioStream);
+      micAudioSource.connect(destination);
+
+      const combinedStream = new MediaStream([
+        ...recorderStream.getVideoTracks(),
+        ...destination.stream.getTracks(),
+      ]);
+
+      return combinedStream;
+    } else {
+      return recorderStream;
+    }
+  }
+
+  async startVideoRecording({
+    onStop,
+    recordMic = false,
+    onRecordingCanceled,
+    onRecordingFailed,
+    recordCamera = false,
+  }: {
+    onStop?: () => void;
+    recordMic?: boolean;
+    onRecordingCanceled?: () => void;
+    onRecordingFailed?: () => void;
+    recordCamera?: boolean;
+  }) {
+    if (this.recorder) {
+      this.recorder.stop();
+    }
+    try {
+      this.stream = await this.getStream({
+        recordMic,
+        recordCamera,
+      });
+    } catch (e) {
+      if (e instanceof DOMException) {
+        console.warn("Permission denied: user canceled recording");
+        await onRecordingCanceled?.();
+        return false;
+      } else if (e instanceof RecordingError) {
+        e.log();
+        await onRecordingFailed?.();
+        return false;
+      } else {
+        console.error(e);
+        await onRecordingFailed?.();
+        return false;
+      }
+    }
+    this.recorder = new MediaRecorder(this.stream, {
+      mimeType: "video/webm;codecs=vp9,opus",
+    });
+    // Start recording.
+    this.recorder.start();
+    this.recorder.addEventListener("dataavailable", (event) => {
+      let recordedBlob = event.data;
+      this.chunks.push(recordedBlob);
+    });
+    this.recorder.addEventListener("stop", () => {
+      const giantBlob = new Blob(this.chunks);
+      ScreenRecorder.downloadBlob(giantBlob, "screen-recording.webm");
+      onStop?.();
+    });
+    return true;
   }
 }

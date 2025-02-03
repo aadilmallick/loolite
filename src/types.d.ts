@@ -16,6 +16,12 @@ interface DocumentPictureInPicture {
 
   // Requests a new Picture-in-Picture window with optional configuration.
   requestWindow(options?: PictureInPictureWindowOptions): Promise<Window>;
+
+  addEventListener(
+    type: "enter",
+    listener: (event: DocumentPictureInPictureEvent) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
 }
 
 interface PictureInPictureWindowOptions {

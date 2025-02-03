@@ -7,8 +7,7 @@ import {
   logToBackground,
   recordCameraChannel,
 } from "../background/controllers/messages";
-import Tabs from "../chrome-api/tabs";
-import { ScreenRecorder } from "./ScreenRecorder";
+import { ScreenRecorder, LoomScreenRecorder } from "./ScreenRecorder";
 
 function closeOffscreenWindow() {
   setTimeout(() => {
@@ -16,7 +15,7 @@ function closeOffscreenWindow() {
   }, 750);
 }
 
-const screenRecorder = new ScreenRecorder();
+const screenRecorder = new LoomScreenRecorder();
 
 startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
   logToBackground("offscreen", { recordAudio, recordCamera });
@@ -44,6 +43,7 @@ startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
       closeOffscreenWindow();
     },
     recordMic: recordAudio,
+    recordCamera: recordCamera,
   });
 
   // const recordingType = ScreenRecorder.getScreenRecordingType(
