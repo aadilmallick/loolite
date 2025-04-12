@@ -2,6 +2,7 @@ const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 const HtmlPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const webpack = require("webpack");
 
 module.exports = {
   entry: {
@@ -47,6 +48,9 @@ module.exports = {
         },
       ],
     }),
+    // new webpack.IgnorePlugin({
+    //   resourceRegExp: /^@ffmpeg\/(ffmpeg|utils)$/,
+    // }),
     ...getHtmlPlugins([
       "popup",
       "options",

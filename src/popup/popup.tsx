@@ -260,12 +260,12 @@ async function onNotRecording() {
   console.log("%c current storage", "color: red; font-size: 20px");
   console.log(await appStorage.getAll());
   await chrome.action.setBadgeText({ text: "" });
-  const scriptableTabs = await getAllScriptableTabs();
-  await Promise.all(
-    scriptableTabs.map((tabId) => {
-      return removeCamera(tabId!);
-    })
-  );
+  // const scriptableTabs = await getAllScriptableTabs();
+  // await Promise.all(
+  //   scriptableTabs.map((tabId) => {
+  //     return removeCamera(tabId!);
+  //   })
+  // );
 }
 
 async function handleRecordingStatus() {

@@ -116,6 +116,7 @@ export class ScreenRecorder {
     }
     const stream = await shitBitch();
     if (stream === null) return false;
+
     this.stream = stream;
     this.recorder = new MediaRecorder(this.stream!);
 
@@ -206,6 +207,7 @@ export class ScreenRecorder {
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm; codecs=vp9",
     });
+
     // Start recording.
     this.recorder.start();
     this.startTime = Date.now();
@@ -320,7 +322,7 @@ export class LoomScreenRecorder extends ScreenRecorder {
     onRecordingFailed,
     recordCamera = false,
   }: {
-    onStop?: () => void;
+    onStop?: (blob: Blob) => void;
     recordMic?: boolean;
     onRecordingCanceled?: () => void;
     onRecordingFailed?: () => void;
@@ -352,6 +354,7 @@ export class LoomScreenRecorder extends ScreenRecorder {
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm; codecs=vp9",
     });
+
     // Start recording.
     this.recorder.start();
     this.startTime = Date.now();
@@ -366,8 +369,7 @@ export class LoomScreenRecorder extends ScreenRecorder {
         const duration = Date.now() - this.startTime;
         blob = await fixWebmDuration(giantBlob, duration);
       }
-      ScreenRecorder.downloadBlob(blob, "screen-recording.webm");
-      await onStop?.();
+      await onStop?.(blob);
     });
     return true;
   }

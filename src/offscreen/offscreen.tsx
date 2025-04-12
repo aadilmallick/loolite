@@ -7,6 +7,7 @@ import {
   logToBackground,
   recordCameraChannel,
 } from "../background/controllers/messages";
+import { ffmpegBrowser } from "./FFMPEGBrowser";
 import { ScreenRecorder, LoomScreenRecorder } from "./ScreenRecorder";
 
 function closeOffscreenWindow() {
@@ -26,7 +27,22 @@ startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
     return;
   }
   const recordingSuccess = await screenRecorder.startVideoRecording({
-    onStop: () => {
+    onStop: async (blob) => {
+      if (!ffmpegBrowser.isLoaded) {
+        await ffmpegBrowser.init();
+      }
+
+      // compress webm
+      const webmBlob = await ffmpegBrowser.processVideoFile(
+        blob,
+        "-i $input -acodec copy -vcodec copy -crf 28 -o $output",
+        {
+          inputFileName: "input.webm",
+          outputFileName: "output.webm",
+        }
+      );
+      ScreenRecorder.downloadBlob(webmBlob, "screen-recording.webm");
+
       logToBackground("offscreen", "recording stopped");
       notCurrentlyRecording.sendP2P(undefined);
       // canceledRecording.sendP2P(undefined);
@@ -46,11 +62,8 @@ startRecordingChannel.listenAsync(async ({ recordAudio, recordCamera }) => {
     recordCamera: recordCamera,
   });
 
-  // const recordingType = ScreenRecorder.getScreenRecordingType(
-  //   screenRecorder.stream!
-  // );
   if (recordingSuccess) {
-    // recordCameraChannel.sendP2P(undefined);
+    ffmpegBrowser.init();
     currentlyRecording.sendP2P({
       withCamera: recordCamera,
     });
