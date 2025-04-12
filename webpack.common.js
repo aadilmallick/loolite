@@ -68,7 +68,8 @@ module.exports = {
           chunk.name !== "background" &&
           chunk.name !== "camera" &&
           chunk.name !== "enableCamera" &&
-          chunk.name !== "enableCameraVideo"
+          chunk.name !== "enableCameraVideo" &&
+          chunk.name !== "offscreen"
         );
       },
     },

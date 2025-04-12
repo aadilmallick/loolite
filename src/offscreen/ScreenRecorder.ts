@@ -1,3 +1,5 @@
+import { fixWebmDuration } from "@fix-webm-duration/fix";
+
 interface StartRecording {
   onStop?: () => void;
   onRecordingCanceled?: () => void;
@@ -29,6 +31,7 @@ export class ScreenRecorder {
   protected recorderStream?: MediaStream;
   protected chunks: Blob[] = [];
   micStream?: MediaStream;
+  protected startTime?: number;
 
   static async checkMicPermission() {
     const result = await navigator.permissions.query({
@@ -118,14 +121,22 @@ export class ScreenRecorder {
 
     // Start recording.
     this.recorder.start();
+    this.startTime = Date.now();
+
     this.recorder.addEventListener("dataavailable", async (event) => {
       let recordedBlob = event.data;
       this.chunks.push(recordedBlob);
     });
-    this.recorder.addEventListener("stop", () => {
+
+    this.recorder.addEventListener("stop", async () => {
       const giantBlob = new Blob(this.chunks);
-      ScreenRecorder.downloadBlob(giantBlob, "audio-recording.webm");
-      options?.onStop?.();
+      let blob: Blob = giantBlob;
+      if (this.startTime) {
+        const duration = Date.now() - this.startTime;
+        blob = await fixWebmDuration(giantBlob, duration);
+      }
+      ScreenRecorder.downloadBlob(blob, "audio-recording.webm");
+      await options?.onStop?.();
     });
     return true;
   }
@@ -193,18 +204,26 @@ export class ScreenRecorder {
       }
     }
     this.recorder = new MediaRecorder(this.stream, {
-      mimeType: "video/webm;codecs=vp9,opus",
+      mimeType: "video/webm; codecs=vp9",
     });
     // Start recording.
     this.recorder.start();
+    this.startTime = Date.now();
+
     this.recorder.addEventListener("dataavailable", (event) => {
       let recordedBlob = event.data;
       this.chunks.push(recordedBlob);
     });
-    this.recorder.addEventListener("stop", () => {
+
+    this.recorder.addEventListener("stop", async () => {
       const giantBlob = new Blob(this.chunks);
-      ScreenRecorder.downloadBlob(giantBlob, "screen-recording.webm");
-      onStop?.();
+      let blob: Blob = giantBlob;
+      if (this.startTime) {
+        const duration = Date.now() - this.startTime;
+        blob = await fixWebmDuration(giantBlob, duration);
+      }
+      ScreenRecorder.downloadBlob(blob, "screen-recording.webm");
+      await onStop?.();
     });
     return true;
   }
@@ -331,18 +350,24 @@ export class LoomScreenRecorder extends ScreenRecorder {
       }
     }
     this.recorder = new MediaRecorder(this.stream, {
-      mimeType: "video/webm;codecs=vp9,opus",
+      mimeType: "video/webm; codecs=vp9",
     });
     // Start recording.
     this.recorder.start();
+    this.startTime = Date.now();
     this.recorder.addEventListener("dataavailable", (event) => {
       let recordedBlob = event.data;
       this.chunks.push(recordedBlob);
     });
-    this.recorder.addEventListener("stop", () => {
+    this.recorder.addEventListener("stop", async () => {
       const giantBlob = new Blob(this.chunks);
-      ScreenRecorder.downloadBlob(giantBlob, "screen-recording.webm");
-      onStop?.();
+      let blob: Blob = giantBlob;
+      if (this.startTime) {
+        const duration = Date.now() - this.startTime;
+        blob = await fixWebmDuration(giantBlob, duration);
+      }
+      ScreenRecorder.downloadBlob(blob, "screen-recording.webm");
+      await onStop?.();
     });
     return true;
   }
