@@ -261,9 +261,14 @@ async function onNotRecording() {
   console.log(await appStorage.getAll());
   await chrome.action.setBadgeText({ text: "" });
   const scriptableTabs = await getAllScriptableTabs();
+  console.log(scriptableTabs);
   await Promise.all(
-    scriptableTabs.map((tabId) => {
-      return removeCamera(tabId!);
+    scriptableTabs.map(async (tabId) => {
+      try {
+        removeCamera(tabId!);
+      } catch (e) {
+        console.log("cannot remove camera");
+      }
     })
   );
 }

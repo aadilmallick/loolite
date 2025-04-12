@@ -85,10 +85,24 @@ export async function getAllScriptableTabs() {
   const tabs = await Tabs.getAllTabs({
     allWindows: true,
   });
-  return tabs
-    .filter((tab) => tab.url)
+
+  const currentTabs = tabs
+    .filter((tab) => !!tab.url)
     .filter((tab) => tab.url!.startsWith("http"))
-    .filter((tab) => !tab.url!.startsWith("https://chrome.google.com/webstore"))
+    .filter(
+      (tab) => !tab.url!.startsWith("https://chrome.google.com/webstore")
+    );
+
+  const boolArray = [] as boolean[];
+  for await (const tab of currentTabs) {
+    const hasPermission = await chrome.permissions.contains({
+      origins: [new URL(tab.url!).origin + "/*"],
+    });
+    boolArray.push(hasPermission);
+  }
+
+  return currentTabs
+    .filter((tab, index) => boolArray[index])
     .map((tab) => tab.id);
 }
 const defaultConsoleStyles = {
