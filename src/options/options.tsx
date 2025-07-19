@@ -2,12 +2,11 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "../index.css";
 import "./options.css";
+import "../popup/popup.css";
 import { DOM, html } from "../utils/Dom";
 import { ToastManager } from "./Toast";
 import { BasicScreenRecorder } from "./BasicScreenRecord";
-import { ScreenRecorder } from "../offscreen/ScreenRecorder";
-import { NavigatorPermissions } from "../offscreen/NavigatorPermissions";
-import { CameraRecorder } from "../offscreen/CameraRecorder";
+import { Permissions } from "./Permissions";
 
 const toast = new ToastManager({
   position: "top-right",
@@ -15,85 +14,31 @@ const toast = new ToastManager({
 });
 toast.setup();
 
-const App = html`
-  <main class="max-w-4xl mx-auto p-4">
-    <div class="mb-4 space-x-2">
-      <button id="enable-mic" class="bg-black text-white px-4 py-2 rounded-lg">
-        Enable Mic Permissions
+const App = () => (
+  <main className="max-w-4xl mx-auto p-4">
+    <Permissions toast={toast} />
+    <div className="mt-4 space-x-2">
+      <button id="mic" className="bg-black text-white px-4 py-2 rounded-lg">
+        Record Audio
       </button>
-      <button
-        id="enable-camera"
-        class="bg-black text-white px-4 py-2 rounded-lg"
-      >
-        Enable Camera Permissions
+      <button id="video" className="bg-black text-white px-4 py-2 rounded-lg">
+        Record Mic and video
+      </button>
+      <button id="screen" className="bg-black text-white px-4 py-2 rounded-lg">
+        Record Screen only
       </button>
     </div>
-    <button id="mic" class="bg-black text-white px-4 py-2 rounded-lg">
-      Record Audio
-    </button>
-    <button id="video" class="bg-black text-white px-4 py-2 rounded-lg">
-      Record Mic and video
-    </button>
-    <button id="screen" class="bg-black text-white px-4 py-2 rounded-lg">
-      Record Screen only
-    </button>
   </main>
-`;
+);
 
-const appElement = DOM.createDomElement(App);
-document.body.appendChild(appElement);
+const root = createRoot(document.body);
+root.render(<App />);
 
 const screenRecorder = new BasicScreenRecorder();
 
-const micButton = appElement.querySelector("#mic") as HTMLButtonElement;
-const videoButton = appElement.querySelector("#video") as HTMLButtonElement;
-const screenButton = appElement.querySelector("#screen") as HTMLButtonElement;
-const enableMicButton = appElement.querySelector(
-  "#enable-mic"
-) as HTMLButtonElement;
-const enableCameraButton = appElement.querySelector(
-  "#enable-camera"
-) as HTMLButtonElement;
-
-enableCameraButton.addEventListener("click", async () => {
-  const granted = await NavigatorPermissions.checkPermission("camera");
-  console.log("permission status", granted);
-  if (granted === "granted") {
-    toast.success("Camera permissions granted");
-  } else {
-    const cameraRecorder = new CameraRecorder();
-    const success = await cameraRecorder.startVideoRecording({
-      onStop: () => {
-        console.log("stopping recording..");
-      },
-    });
-    if (!success) {
-      toast.danger("Camera permissions denied");
-      return;
-    }
-    await cameraRecorder.stopRecording();
-  }
-});
-
-enableMicButton.addEventListener("click", async () => {
-  const granted = await ScreenRecorder.checkMicPermission();
-  console.log("permission status", granted);
-  if (granted === "granted") {
-    toast.success("Mic permissions granted");
-  } else {
-    const screenRecorder = new ScreenRecorder();
-    const success = await screenRecorder.startAudioRecording({
-      onStop: () => {
-        console.log("stopping recording..");
-      },
-    });
-    if (!success) {
-      toast.danger("mic permissions denied");
-      return;
-    }
-    await screenRecorder.stopRecording();
-  }
-});
+const micButton = document.querySelector("#mic") as HTMLButtonElement;
+const videoButton = document.querySelector("#video") as HTMLButtonElement;
+const screenButton = document.querySelector("#screen") as HTMLButtonElement;
 
 function createReactiveProxy<T extends string, V>(
   key: T,
