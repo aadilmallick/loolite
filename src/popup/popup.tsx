@@ -30,30 +30,44 @@ const HTMLContent = html`
   <section>
     <h1 class="text-2xl font-bold">Screen Recorder</h1>
     <div class="p-2">
-      <label htmlFor="mic" class="text-gray-500 text-sm">Record mic?</label>
-      <input type="checkbox" name="mic" id="mic" />
+      <div class="permission-item">
+        <label class="permission-label">Record mic?</label>
+        <label class="switch">
+          <input type="checkbox" name="mic" id="mic" />
+          <span class="slider round"></span>
+        </label>
+      </div>
     </div>
     <div class="p-2">
-      <label htmlFor="camera" class="text-gray-500 text-sm"
-        >Record camera?</label
-      >
-      <input type="checkbox" name="camera" id="camera" />
+      <div class="permission-item">
+        <label class="permission-label">Record camera?</label>
+        <label class="switch">
+          <input type="checkbox" name="camera" id="camera" />
+          <span class="slider round"></span>
+        </label>
+      </div>
     </div>
     <div class="p-2">
-      <label htmlFor="circle" class="text-gray-500 text-sm"
-        >Circle Frame?</label
-      >
-      <input type="checkbox" name="circle" id="circle" />
+      <div class="permission-item">
+        <label class="permission-label">Circle Frame?</label>
+        <label class="switch">
+          <input type="checkbox" name="circle" id="circle" />
+          <span class="slider round"></span>
+        </label>
+      </div>
     </div>
     <div class="p-2">
-      <label htmlFor="developer-settings" class="text-gray-500 text-sm"
-        >Turn on developer settings</label
-      >
-      <input
-        type="checkbox"
-        name="developer-settings"
-        id="developer-settings"
-      />
+      <div class="permission-item">
+        <label class="permission-label">Turn on developer settings</label>
+        <label class="switch">
+          <input
+            type="checkbox"
+            name="developer-settings"
+            id="developer-settings"
+          />
+          <span class="slider round"></span>
+        </label>
+      </div>
     </div>
     <button
       class="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
@@ -288,8 +302,12 @@ async function handleRecordingStatus() {
 
 async function populateSettings() {
   const circleFrame = await appStorage.get("circle");
+  const micPerms = await appStorage.get("micPerms");
+  const cameraPerms = await appStorage.get("cameraPerms");
   console.log("circleFrame", circleFrame);
   circleFrameCheckbox.checked = circleFrame;
+  recordMicCheckbox.checked = micPerms;
+  recordCameraCheckbox.checked = cameraPerms;
 }
 
 handleRecordingStatus();
@@ -302,12 +320,12 @@ circleFrameCheckbox.addEventListener("change", async () => {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function handleMicPermission() {
-  const perm = await NavigatorPermissions.checkPermission("microphone");
-  if (perm === "prompt") {
+  const perm = await navigator.permissions.query({ name: "microphone" });
+  if (perm.state === "prompt") {
     // redirect users to my options
     chrome.runtime.openOptionsPage();
     return false;
-  } else if (perm === "denied") {
+  } else if (perm.state === "denied") {
     // redirect users to change settings for my extension
     const settingsUrl = `chrome://extensions/?id=${chrome.runtime.id}`;
     chrome.tabs.create({ url: settingsUrl, active: true });
@@ -319,27 +337,30 @@ async function handleMicPermission() {
         video: false,
       });
       console.log("stream", stream);
+      await appStorage.set("micPerms", true);
       return true;
     } catch (e) {
       console.error(e);
+      await appStorage.set("micPerms", false);
       return false;
     }
   }
 }
 
 async function handleCameraPermission() {
-  const perm = await NavigatorPermissions.checkPermission("camera");
+  const perm = await navigator.permissions.query({ name: "camera" });
   console.log("camera permission", perm);
-  if (perm === "prompt") {
+  if (perm.state === "prompt") {
     // redirect users to my options
     chrome.runtime.openOptionsPage();
     return false;
-  } else if (perm === "denied") {
+  } else if (perm.state === "denied") {
     // redirect users to change settings for my extension
     const settingsUrl = `chrome://extensions/?id=${chrome.runtime.id}`;
     chrome.tabs.create({ url: settingsUrl, active: true });
     return false;
   } else {
+    await appStorage.set("cameraPerms", true);
     return true;
   }
 }
