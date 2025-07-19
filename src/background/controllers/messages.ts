@@ -57,5 +57,12 @@ export function logToBackground(sender: "popup" | "offscreen", message: any) {
   });
 }
 
+export const setVideoDeviceIdChannel = new MessagesOneWay<string, undefined>(
+  "set-video-device-id"
+);
+export const setAudioDeviceIdChannel = new MessagesOneWay<string, undefined>(
+  "set-audio-device-id"
+);
+
 // define static methods here
 export class MessageHandler {}
