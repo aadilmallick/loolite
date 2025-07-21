@@ -15,9 +15,9 @@ const toast = new ToastManager({
 toast.setup();
 
 const App = () => (
-  <main className="max-w-4xl mx-auto p-4">
+  <main className="max-w-4xl mx-auto p-4 w-[90vw]">
     <Permissions toast={toast} />
-    <div className="mt-4 space-x-2">
+    <div className="mt-4 flex gap-4">
       <button id="mic" className="bg-black text-white px-4 py-2 rounded-lg">
         Record Audio
       </button>
@@ -31,7 +31,9 @@ const App = () => (
   </main>
 );
 
-const root = createRoot(document.body);
+const container = document.createElement("div");
+document.body.appendChild(container);
+const root = createRoot(container);
 root.render(<App />);
 
 const screenRecorder = new BasicScreenRecorder();

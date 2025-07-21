@@ -76,7 +76,7 @@ export const Permissions: React.FC<PermissionsProps> = ({ toast }) => {
   };
 
   return (
-    <div className="permissions-container">
+    <div className="permissions-container space-y-4" id="perms-container">
       <div className="permission-item">
         <label htmlFor="mic-permission" className="permission-label">
           Enable Mic Permissions

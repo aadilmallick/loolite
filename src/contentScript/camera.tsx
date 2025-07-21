@@ -18,7 +18,6 @@ import {
   CSSVariablesManagerWithDefaultData,
 } from "../utils/Dom";
 import { ContentScriptUI } from "../utils/web-components/ContentScriptUI";
-import { Draggable, DragMoveEvent } from "@shopify/draggable";
 
 const manager = new ToastManager({
   position: "bottom-left",
@@ -147,7 +146,8 @@ async function create() {
   audioDevices.forEach((device) => {
     const option = document.createElement("option");
     option.value = device.deviceId;
-    option.text = device.label || `Microphone ${audioSelect.options.length + 1}`;
+    option.text =
+      device.label || `Microphone ${audioSelect.options.length + 1}`;
     audioSelect.appendChild(option);
   });
 
@@ -168,13 +168,13 @@ async function create() {
   videoSelect.addEventListener("change", async (e) => {
     const target = e.target as HTMLSelectElement;
     await appStorage.set("videoDeviceId", target.value);
-    setVideoDeviceIdChannel.send(target.value);
+    setVideoDeviceIdChannel.sendC2P(target.value);
   });
 
   audioSelect.addEventListener("change", async (e) => {
     const target = e.target as HTMLSelectElement;
     await appStorage.set("audioDeviceId", target.value);
-    setAudioDeviceIdChannel.send(target.value);
+    setAudioDeviceIdChannel.sendC2P(target.value);
   });
 
   listenToMessages(videoFrame);
