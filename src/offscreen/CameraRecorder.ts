@@ -35,13 +35,22 @@ export class CameraRecorder {
     return result.state;
   }
 
-  static async getBasicCameraStream({ audio = false }: { audio: boolean }) {
+  static async getBasicCameraStream({
+    audio = false,
+    videoDeviceId,
+    audioDeviceId,
+  }: {
+    audio: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
+  }) {
     const recorderStream = await navigator.mediaDevices.getUserMedia({
       audio: audio
         ? {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined,
           }
         : false,
       video: {
@@ -50,15 +59,26 @@ export class CameraRecorder {
         height: { min: 576, ideal: 720, max: 1080 },
         frameRate: { ideal: 30, max: 30 },
         aspectRatio: 1.7777777778,
+        deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
       },
     });
     return recorderStream;
   }
 
-  private async getStream() {
+  private async getStream({
+    videoDeviceId,
+    audioDeviceId,
+  }: {
+    videoDeviceId?: string;
+    audioDeviceId?: string;
+  } = {}) {
     const recorderStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: true,
+      audio: {
+        deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined,
+      },
+      video: {
+        deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+      },
     });
 
     // if video ends, audio should too.
@@ -81,17 +101,21 @@ export class CameraRecorder {
     onRecordingCanceled,
     onRecordingFailed,
     downloadStream,
+    videoDeviceId,
+    audioDeviceId,
   }: {
     onStop?: () => void;
     onRecordingCanceled?: () => void;
     onRecordingFailed?: () => void;
     downloadStream?: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   }) {
     if (this.recorder) {
       this.recorder.stop();
     }
     try {
-      this.stream = await this.getStream();
+      this.stream = await this.getStream({ videoDeviceId, audioDeviceId });
     } catch (e) {
       if (e instanceof DOMException) {
         console.warn("Permission denied: user canceled recording");
@@ -161,6 +185,17 @@ export class CameraRecorder {
       }
       return false; // Other error, camera might not be available
     }
+  }
+
+  static async getDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(
+      (device) => device.kind === "videoinput"
+    );
+    const audioDevices = devices.filter(
+      (device) => device.kind === "audioinput"
+    );
+    return { videoDevices, audioDevices };
   }
 
   /**

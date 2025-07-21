@@ -2,6 +2,7 @@ import { Runtime } from "../chrome-api/runtime";
 import Tabs from "../chrome-api/tabs";
 import {
   canceledRecording,
+  currentlyRecording,
   logChannel,
   notCurrentlyRecording,
 } from "./controllers/messages";
@@ -12,6 +13,7 @@ import {
   removeCamera,
 } from "./controllers/scriptingControllers";
 import { appStorage } from "./controllers/storage";
+import { WebAccessibleResources } from "../chrome-api/webAccessibleResources";
 
 Runtime.onInstall({
   onAll: async () => {
@@ -38,18 +40,35 @@ async function onStopRecording() {
     })
   ).filter((tab) => tab.url?.includes(chrome.runtime.id))[0];
   pinnedTab && (await chrome.tabs.remove(pinnedTab.id!));
-  // remove camera from all injected tabs
-
-  // const scriptableTabs = await getAllScriptableTabs();
-  // console.log("scriptableTabs", scriptableTabs);
-  // await Promise.all(
-  //   scriptableTabs.map((tabId) => {
-  //     return removeCamera(tabId!);
-  //   })
-  // );
 }
+
+async function onStartRecording(withCamera: boolean) {
+  await Promise.all([
+    appStorage.set("isRecording", true),
+    appStorage.set("isRecordingCamera", withCamera),
+    chrome.action.setBadgeText({ text: "REC" }),
+  ]);
+
+  if (withCamera) {
+    // Create the enableCamera.html tab
+    await Tabs.createTab({
+      active: true,
+      pinned: true,
+      url: WebAccessibleResources.getFileURIForProcess("enableCamera.html"),
+    });
+  }
+}
+
+currentlyRecording.listen(({ withCamera }) => {
+  onStartRecording(withCamera);
+});
+
 notCurrentlyRecording.listenAsync(async () => {
   await onStopRecording();
+});
+
+canceledRecording.listen(() => {
+  onStopRecording();
 });
 
 Tabs.Events.onTabHighlighted(async ({ tabIds }) => {

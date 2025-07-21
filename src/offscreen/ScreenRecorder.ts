@@ -40,22 +40,27 @@ export class ScreenRecorder {
     return result.state;
   }
 
-  protected async getStream({ recordMic }: { recordMic: boolean }) {
+  protected async getStream({
+    recordMic,
+    videoDeviceId,
+    audioDeviceId,
+  }: {
+    recordMic: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
+  }) {
     const recorderStream = await navigator.mediaDevices.getDisplayMedia({
       audio: recordMic,
       video: true,
     });
     this.recorderStream = recorderStream;
-
-    // if video ends, audio should too.
     this.recorderStream.getTracks()[0].addEventListener("ended", async () => {
       await this.stopRecording();
     });
-
-    // if recording window (no system audio), then just join with mic.
+    // If recording window (no system audio), then just join with mic.
     if (recorderStream.getAudioTracks().length === 0 && recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         video: false,
       });
       const combinedStream = new MediaStream([
@@ -65,30 +70,23 @@ export class ScreenRecorder {
       return combinedStream;
     } else if (recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         video: false,
       });
       if (audioStream.getAudioTracks().length === 0) {
         throw new MicNotEnabledError(audioStream);
       }
-
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
-
-      // Add tab audio to the destination
       const tabAudioSource =
         audioContext.createMediaStreamSource(recorderStream);
       tabAudioSource.connect(destination);
-
-      // Add mic audio to the destination
       const micAudioSource = audioContext.createMediaStreamSource(audioStream);
       micAudioSource.connect(destination);
-
       const combinedStream = new MediaStream([
         ...recorderStream.getVideoTracks(),
         ...destination.stream.getTracks(),
       ]);
-
       return combinedStream;
     } else {
       return recorderStream;
@@ -100,7 +98,7 @@ export class ScreenRecorder {
       this.recorder.stop();
     }
     let audioStream: MediaStream;
-    async function shitBitch() {
+    async function tryGetUserMedia() {
       try {
         audioStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -114,7 +112,7 @@ export class ScreenRecorder {
         }
       }
     }
-    const stream = await shitBitch();
+    const stream = await tryGetUserMedia();
     if (stream === null) return false;
     this.stream = stream;
     this.recorder = new MediaRecorder(this.stream!);
@@ -175,11 +173,15 @@ export class ScreenRecorder {
     recordMic = false,
     onRecordingCanceled,
     onRecordingFailed,
+    videoDeviceId,
+    audioDeviceId,
   }: {
     onStop?: () => void;
     recordMic?: boolean;
     onRecordingCanceled?: () => void;
     onRecordingFailed?: () => void;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   }) {
     if (this.recorder) {
       this.recorder.stop();
@@ -187,6 +189,8 @@ export class ScreenRecorder {
     try {
       this.stream = await this.getStream({
         recordMic,
+        videoDeviceId,
+        audioDeviceId,
       });
     } catch (e) {
       if (e instanceof DOMException) {
@@ -206,15 +210,12 @@ export class ScreenRecorder {
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm; codecs=vp9",
     });
-    // Start recording.
     this.recorder.start();
     this.startTime = Date.now();
-
     this.recorder.addEventListener("dataavailable", (event) => {
       let recordedBlob = event.data;
       this.chunks.push(recordedBlob);
     });
-
     this.recorder.addEventListener("stop", async () => {
       const giantBlob = new Blob(this.chunks);
       let blob: Blob = giantBlob;
@@ -250,13 +251,16 @@ export class LoomScreenRecorder extends ScreenRecorder {
   protected async getStream({
     recordMic,
     recordCamera,
+    videoDeviceId,
+    audioDeviceId,
   }: {
     recordMic: boolean;
     recordCamera: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   }) {
     const recorderStream = await navigator.mediaDevices.getDisplayMedia({
       audio: recordMic,
-      // need to record entire screen if also recording camera with loom
       video: recordCamera
         ? {
             displaySurface: "monitor",
@@ -264,16 +268,12 @@ export class LoomScreenRecorder extends ScreenRecorder {
         : true,
     });
     this.recorderStream = recorderStream;
-
-    // if video ends, audio should too.
     this.recorderStream.getTracks()[0].addEventListener("ended", async () => {
       await this.stopRecording();
     });
-
-    // if recording window (no system audio), then just join with mic.
     if (recorderStream.getAudioTracks().length === 0 && recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         video: false,
       });
       const combinedStream = new MediaStream([
@@ -283,30 +283,23 @@ export class LoomScreenRecorder extends ScreenRecorder {
       return combinedStream;
     } else if (recordMic) {
       const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         video: false,
       });
       if (audioStream.getAudioTracks().length === 0) {
         throw new MicNotEnabledError(audioStream);
       }
-
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
-
-      // Add tab audio to the destination
       const tabAudioSource =
         audioContext.createMediaStreamSource(recorderStream);
       tabAudioSource.connect(destination);
-
-      // Add mic audio to the destination
       const micAudioSource = audioContext.createMediaStreamSource(audioStream);
       micAudioSource.connect(destination);
-
       const combinedStream = new MediaStream([
         ...recorderStream.getVideoTracks(),
         ...destination.stream.getTracks(),
       ]);
-
       return combinedStream;
     } else {
       return recorderStream;
@@ -319,12 +312,16 @@ export class LoomScreenRecorder extends ScreenRecorder {
     onRecordingCanceled,
     onRecordingFailed,
     recordCamera = false,
+    videoDeviceId,
+    audioDeviceId,
   }: {
     onStop?: () => void;
     recordMic?: boolean;
     onRecordingCanceled?: () => void;
     onRecordingFailed?: () => void;
     recordCamera?: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   }) {
     if (this.recorder) {
       this.recorder.stop();
@@ -333,6 +330,8 @@ export class LoomScreenRecorder extends ScreenRecorder {
       this.stream = await this.getStream({
         recordMic,
         recordCamera,
+        videoDeviceId,
+        audioDeviceId,
       });
     } catch (e) {
       if (e instanceof DOMException) {
@@ -352,7 +351,6 @@ export class LoomScreenRecorder extends ScreenRecorder {
     this.recorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm; codecs=vp9",
     });
-    // Start recording.
     this.recorder.start();
     this.startTime = Date.now();
     this.recorder.addEventListener("dataavailable", (event) => {

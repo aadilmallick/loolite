@@ -31,8 +31,12 @@ export const Permissions: React.FC<PermissionsProps> = ({ toast }) => {
       toast.success("Camera permissions granted");
     } else {
       const cameraRecorder = new CameraRecorder();
+      const videoDeviceId = await appStorage.get("videoDeviceId");
+      const audioDeviceId = await appStorage.get("audioDeviceId");
       const success = await cameraRecorder.startVideoRecording({
         onStop: () => {},
+        videoDeviceId,
+        audioDeviceId,
       });
       if (!success) {
         toast.danger("Camera permissions denied");
@@ -72,7 +76,7 @@ export const Permissions: React.FC<PermissionsProps> = ({ toast }) => {
   };
 
   return (
-    <div className="permissions-container">
+    <div className="permissions-container space-y-4" id="perms-container">
       <div className="permission-item">
         <label htmlFor="mic-permission" className="permission-label">
           Enable Mic Permissions

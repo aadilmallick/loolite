@@ -4,6 +4,8 @@ export const startRecordingChannel = new MessagesOneWay<
   {
     recordAudio: boolean;
     recordCamera: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   },
   undefined
 >("startRecording");
@@ -56,6 +58,13 @@ export function logToBackground(sender: "popup" | "offscreen", message: any) {
     sender,
   });
 }
+
+export const setVideoDeviceIdChannel = new MessagesOneWay<string, undefined>(
+  "set-video-device-id"
+);
+export const setAudioDeviceIdChannel = new MessagesOneWay<string, undefined>(
+  "set-audio-device-id"
+);
 
 // define static methods here
 export class MessageHandler {}

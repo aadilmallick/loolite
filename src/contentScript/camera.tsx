@@ -1,6 +1,11 @@
-import { cameraStyleChannel } from "../background/controllers/messages";
+import {
+  cameraStyleChannel,
+  setAudioDeviceIdChannel,
+  setVideoDeviceIdChannel,
+} from "../background/controllers/messages";
 import { appStorage } from "../background/controllers/storage";
 import { MessagesModel } from "../chrome-api/messages";
+import { CameraRecorder } from "../offscreen/CameraRecorder";
 import { WebAccessibleResources } from "../chrome-api/webAccessibleResources";
 import { NavigatorPermissions } from "../offscreen/NavigatorPermissions";
 import { ToastManager } from "../options/Toast";
@@ -13,7 +18,6 @@ import {
   CSSVariablesManagerWithDefaultData,
 } from "../utils/Dom";
 import { ContentScriptUI } from "../utils/web-components/ContentScriptUI";
-import { Draggable, DragMoveEvent } from "@shopify/draggable";
 
 const manager = new ToastManager({
   position: "bottom-left",
@@ -121,6 +125,57 @@ async function create() {
   const iframeContainer = videoFrame.querySelector(
     "#camera-iframe-container"
   ) as HTMLElement;
+
+  const controlsContainer = document.createElement("div");
+  controlsContainer.style.position = "absolute";
+  controlsContainer.style.top = "10px";
+  controlsContainer.style.left = "10px";
+  controlsContainer.style.zIndex = "1000";
+
+  const { videoDevices, audioDevices } = await CameraRecorder.getDevices();
+
+  const videoSelect = document.createElement("select");
+  videoDevices.forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.text = device.label || `Camera ${videoSelect.options.length + 1}`;
+    videoSelect.appendChild(option);
+  });
+
+  const audioSelect = document.createElement("select");
+  audioDevices.forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.text =
+      device.label || `Microphone ${audioSelect.options.length + 1}`;
+    audioSelect.appendChild(option);
+  });
+
+  controlsContainer.appendChild(videoSelect);
+  controlsContainer.appendChild(audioSelect);
+  iframeContainer.appendChild(controlsContainer);
+
+  const storedVideoDeviceId = await appStorage.get("videoDeviceId");
+  if (storedVideoDeviceId) {
+    videoSelect.value = storedVideoDeviceId;
+  }
+
+  const storedAudioDeviceId = await appStorage.get("audioDeviceId");
+  if (storedAudioDeviceId) {
+    audioSelect.value = storedAudioDeviceId;
+  }
+
+  videoSelect.addEventListener("change", async (e) => {
+    const target = e.target as HTMLSelectElement;
+    await appStorage.set("videoDeviceId", target.value);
+    setVideoDeviceIdChannel.sendC2P(target.value);
+  });
+
+  audioSelect.addEventListener("change", async (e) => {
+    const target = e.target as HTMLSelectElement;
+    await appStorage.set("audioDeviceId", target.value);
+    setAudioDeviceIdChannel.sendC2P(target.value);
+  });
 
   listenToMessages(videoFrame);
 

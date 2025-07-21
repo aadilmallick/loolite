@@ -8,6 +8,8 @@ export const appStorage = new SyncStorage({
   size: 200,
   micPerms: false,
   cameraPerms: false,
+  videoDeviceId: undefined as string | undefined,
+  audioDeviceId: undefined as string | undefined,
 });
 export const appSettingsStorage = new SyncStorage({});
 
