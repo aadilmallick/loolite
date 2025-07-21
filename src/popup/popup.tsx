@@ -26,11 +26,72 @@ import "./popup.css";
 
 // region HTML
 
+let videoDevices: MediaDeviceInfo[] = [];
+let audioDevices: MediaDeviceInfo[] = [];
+
+async function populateDeviceDropdowns() {
+  const devices = await CameraRecorder.getDevices();
+  videoDevices = devices.videoDevices;
+  audioDevices = devices.audioDevices;
+
+  // Populate video select
+  videoSelect.innerHTML = "";
+  videoDevices.forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.text = device.label || `Camera ${videoSelect.options.length + 1}`;
+    videoSelect.appendChild(option);
+  });
+
+  // Populate audio select
+  audioSelect.innerHTML = "";
+  audioDevices.forEach((device) => {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.text =
+      device.label || `Microphone ${audioSelect.options.length + 1}`;
+    audioSelect.appendChild(option);
+  });
+
+  // Set stored values if available
+  const storedVideoDeviceId = await appStorage.get("videoDeviceId");
+  if (storedVideoDeviceId) {
+    videoSelect.value = storedVideoDeviceId;
+  }
+  const storedAudioDeviceId = await appStorage.get("audioDeviceId");
+  if (storedAudioDeviceId) {
+    audioSelect.value = storedAudioDeviceId;
+  }
+}
+
+const videoSelect = document.createElement("select");
+videoSelect.id = "video-device-select";
+videoSelect.style.border = "1px solid #888";
+videoSelect.style.padding = "4px 8px";
+videoSelect.style.marginTop = "8px";
+videoSelect.style.width = "100%";
+
+const audioSelect = document.createElement("select");
+audioSelect.id = "audio-device-select";
+audioSelect.style.border = "1px solid #888";
+audioSelect.style.padding = "4px 8px";
+audioSelect.style.marginTop = "8px";
+audioSelect.style.width = "100%";
+
+videoSelect.addEventListener("change", async (e) => {
+  const target = e.target as HTMLSelectElement;
+  await appStorage.set("videoDeviceId", target.value);
+});
+audioSelect.addEventListener("change", async (e) => {
+  const target = e.target as HTMLSelectElement;
+  await appStorage.set("audioDeviceId", target.value);
+});
+
 const HTMLContent = html`
   <section>
     <h1 class="text-2xl font-bold">Screen Recorder</h1>
     <div class="p-2">
-      <div class="permission-item">
+      <div class="permission-item flex-wrap gap-2">
         <label class="permission-label">Record mic?</label>
         <label class="switch">
           <input type="checkbox" name="mic" id="mic" />
@@ -39,7 +100,7 @@ const HTMLContent = html`
       </div>
     </div>
     <div class="p-2">
-      <div class="permission-item">
+      <div class="permission-item flex-wrap gap-2">
         <label class="permission-label">Record camera?</label>
         <label class="switch">
           <input type="checkbox" name="camera" id="camera" />
@@ -262,8 +323,6 @@ async function onIsRecording() {
 
   await appStorage.set("isRecording", true);
   await chrome.action.setBadgeText({ text: "REC" });
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
 }
 
 async function onNotRecording() {
@@ -271,8 +330,6 @@ async function onNotRecording() {
   startRecording.disabled = false;
   await appStorage.set("isRecording", false);
   await appStorage.set("isRecordingCamera", false);
-  console.log("%c current storage", "color: red; font-size: 20px");
-  console.log(await appStorage.getAll());
   await chrome.action.setBadgeText({ text: "" });
   const scriptableTabs = await getAllScriptableTabs();
   console.log(scriptableTabs);
@@ -373,27 +430,56 @@ resetCameraBtn.addEventListener("click", async () => {
   await injectCamera(currentTab.id!);
 });
 
+const micContainer = recordMicCheckbox.closest(
+  ".permission-item"
+) as HTMLElement;
+const cameraContainer = recordCameraCheckbox.closest(
+  ".permission-item"
+) as HTMLElement;
+
+function updateDeviceDropdownVisibility() {
+  if (recordMicCheckbox.checked) {
+    if (!audioSelect.parentElement) micContainer.appendChild(audioSelect);
+    audioSelect.style.display = "";
+  } else {
+    audioSelect.style.display = "none";
+  }
+  if (recordCameraCheckbox.checked) {
+    if (!videoSelect.parentElement) cameraContainer.appendChild(videoSelect);
+    videoSelect.style.display = "";
+  } else {
+    videoSelect.style.display = "none";
+  }
+}
+
+recordMicCheckbox.addEventListener("change", updateDeviceDropdownVisibility);
+recordCameraCheckbox.addEventListener("change", updateDeviceDropdownVisibility);
+
+// On popup open, populate device dropdowns and set initial visibility
+populateDeviceDropdowns().then(updateDeviceDropdownVisibility);
+
 startRecording.addEventListener("click", async () => {
   const shouldRecordMic = recordMicCheckbox.checked;
   const shouldRecordCamera = recordCameraCheckbox.checked;
   // request audio permissions if checked
   if (shouldRecordMic) {
     const isGranted = await handleMicPermission();
-    console.log("mic permission isGranted", isGranted);
     if (!isGranted) {
       return;
     }
+    // Store selected audio device
+    await appStorage.set("audioDeviceId", audioSelect.value);
   }
-
   // request camera permissions if checked
   if (shouldRecordCamera) {
     const isGranted = await handleCameraPermission();
-    console.log("camera permission isGranted", isGranted);
     if (!isGranted) {
       return;
     }
     await appStorage.set("isRecordingCamera", true);
     await appStorage.set("webcamCoordinates", null);
+    // Store selected video device
+    await appStorage.set("videoDeviceId", videoSelect.value);
   }
   if (!shouldRecordCamera) {
     await appStorage.set("isRecordingCamera", false);
@@ -405,9 +491,16 @@ startRecording.addEventListener("click", async () => {
   });
   startRecording.disabled = true;
   await sleep(500);
+  // Get device IDs right before sending
+  const videoDeviceId =
+    videoSelect.value || (await appStorage.get("videoDeviceId"));
+  const audioDeviceId =
+    audioSelect.value || (await appStorage.get("audioDeviceId"));
   startRecordingChannel.sendP2P({
     recordAudio: shouldRecordMic,
     recordCamera: shouldRecordCamera,
+    videoDeviceId,
+    audioDeviceId,
   });
 });
 
@@ -438,30 +531,24 @@ async function injectCameraIntoCurrentTab() {
   });
 }
 
-currentlyRecording.listen(({ withCamera }) => {
-  // injectCameraIntoCurrentTab();
-  logToBackground("popup", { withCamera });
-  async function dookieShit() {
-    await onIsRecording();
-    // await injectCameraIntoCurrentTab(); TODO: remove this
-    await Tabs.createTab({
-      active: true,
-      pinned: true,
-      url: WebAccessibleResources.getFileURIForProcess("enableCamera.html"),
-    });
-
-    // setTimeout(() => {
-    //   window.close();
-    // }, 750);
-  }
-
-  if (withCamera) {
-    appStorage.set("isRecordingCamera", true);
-    dookieShit();
-  } else {
-    appStorage.set("isRecordingCamera", false);
-  }
-});
+// Remove the currentlyRecording listener since it's now handled in background
+// currentlyRecording.listen(({ withCamera }) => {
+//   logToBackground("popup", { withCamera });
+//   async function dookieShit() {
+//     await onIsRecording();
+//     await Tabs.createTab({
+//       active: true,
+//       pinned: true,
+//       url: WebAccessibleResources.getFileURIForProcess("enableCamera.html"),
+//     });
+//   }
+//   if (withCamera) {
+//     appStorage.set("isRecordingCamera", true);
+//     dookieShit();
+//   } else {
+//     appStorage.set("isRecordingCamera", false);
+//   }
+// });
 
 notCurrentlyRecording.listen(() => {
   logToBackground(

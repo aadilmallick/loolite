@@ -4,6 +4,8 @@ export const startRecordingChannel = new MessagesOneWay<
   {
     recordAudio: boolean;
     recordCamera: boolean;
+    videoDeviceId?: string;
+    audioDeviceId?: string;
   },
   undefined
 >("startRecording");
